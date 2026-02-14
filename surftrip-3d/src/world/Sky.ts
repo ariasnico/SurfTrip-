@@ -5,6 +5,7 @@ export class Sky {
   private clouds: THREE.Group;
   private seagulls: THREE.Group;
   private scene: THREE.Scene;
+  private skyMesh: THREE.Mesh;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -15,17 +16,16 @@ export class Sky {
       side: THREE.BackSide,
       uniforms: {},
       vertexShader: /* glsl */ `
-        varying vec3 vWorldPosition;
+        varying vec3 vLocalPos;
         void main() {
-          vec4 worldPos = modelMatrix * vec4(position, 1.0);
-          vWorldPosition = worldPos.xyz;
-          gl_Position = projectionMatrix * viewMatrix * worldPos;
+          vLocalPos = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: /* glsl */ `
-        varying vec3 vWorldPosition;
+        varying vec3 vLocalPos;
         void main() {
-          float h = normalize(vWorldPosition).y;
+          float h = normalize(vLocalPos).y;
           // Gradient: horizon warm → zenith blue
           vec3 zenith = vec3(0.35, 0.60, 0.92);
           vec3 horizon = vec3(0.75, 0.88, 0.97);
@@ -37,11 +37,11 @@ export class Sky {
         }
       `,
     });
-    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
-    this.scene.add(skyMesh);
+    this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.scene.add(this.skyMesh);
 
-    // Remove flat background color so the sphere shows
-    this.scene.background = null;
+    // Fallback background matching fog color (safety net)
+    this.scene.background = new THREE.Color(0x87ceeb);
 
     // Clouds
     this.clouds = new THREE.Group();
@@ -136,6 +136,9 @@ export class Sky {
   }
 
   update(dt: number, playerZ: number): void {
+    // Keep sky sphere centered on the player
+    this.skyMesh.position.z = playerZ;
+
     // Drift clouds
     for (const cloud of this.clouds.children) {
       cloud.position.x += (cloud.userData['speedX'] as number) * dt;
