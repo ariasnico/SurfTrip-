@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { randInt, randFloat } from '@utils/MathUtils';
 import { LANES } from './LaneSystem';
 import { createLowObstacle, createHighObstacle } from '@world/ObstacleModels';
+import type { ZoneId } from '@data/ZoneData';
 
 export interface Obstacle {
   mesh: THREE.Mesh;
@@ -19,6 +20,7 @@ export class ObstacleSpawner {
   private nextSpawnZ = 30; // start spawning ahead of the player
   private group: THREE.Group;
   private scene: THREE.Scene;
+  currentZone: ZoneId = 'chapadmalal';
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -52,7 +54,7 @@ export class ObstacleSpawner {
   private spawn(z: number): void {
     const laneIdx = randInt(0, 2);
     const type = Math.random() < 0.7 ? 'low' : 'high';
-    const mesh = type === 'low' ? createLowObstacle() : createHighObstacle();
+    const mesh = type === 'low' ? createLowObstacle(this.currentZone) : createHighObstacle(this.currentZone);
 
     const x = LANES[laneIdx];
     if (type === 'low') {
@@ -69,7 +71,7 @@ export class ObstacleSpawner {
   /** Spawn obstacles from a pattern section at a given world Z offset */
   spawnFromPattern(patternObstacles: { lane: number; offsetZ: number; type: 'low' | 'high' }[], startZ: number): void {
     for (const po of patternObstacles) {
-      const mesh = po.type === 'low' ? createLowObstacle() : createHighObstacle();
+      const mesh = po.type === 'low' ? createLowObstacle(this.currentZone) : createHighObstacle(this.currentZone);
       const x = LANES[po.lane];
       const z = startZ + po.offsetZ;
       if (po.type === 'low') {

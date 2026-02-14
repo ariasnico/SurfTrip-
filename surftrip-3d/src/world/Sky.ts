@@ -6,15 +6,25 @@ export class Sky {
   private seagulls: THREE.Group;
   private scene: THREE.Scene;
   private skyMesh: THREE.Mesh;
+  private skyUniforms: {
+    uZenith: { value: THREE.Vector3 };
+    uHorizon: { value: THREE.Vector3 };
+    uGround: { value: THREE.Vector3 };
+  };
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
 
-    // Sky gradient via a large background sphere
+    // Sky gradient via a large background sphere with dynamic uniforms
     const skyGeo = new THREE.SphereGeometry(150, 16, 16);
+    this.skyUniforms = {
+      uZenith: { value: new THREE.Vector3(0.35, 0.60, 0.92) },
+      uHorizon: { value: new THREE.Vector3(0.75, 0.88, 0.97) },
+      uGround: { value: new THREE.Vector3(0.92, 0.87, 0.78) },
+    };
     const skyMat = new THREE.ShaderMaterial({
       side: THREE.BackSide,
-      uniforms: {},
+      uniforms: this.skyUniforms,
       vertexShader: /* glsl */ `
         varying vec3 vLocalPos;
         void main() {
@@ -23,16 +33,15 @@ export class Sky {
         }
       `,
       fragmentShader: /* glsl */ `
+        uniform vec3 uZenith;
+        uniform vec3 uHorizon;
+        uniform vec3 uGround;
         varying vec3 vLocalPos;
         void main() {
           float h = normalize(vLocalPos).y;
-          // Gradient: horizon warm → zenith blue
-          vec3 zenith = vec3(0.35, 0.60, 0.92);
-          vec3 horizon = vec3(0.75, 0.88, 0.97);
-          vec3 ground = vec3(0.92, 0.87, 0.78);
           vec3 color = h > 0.0
-            ? mix(horizon, zenith, pow(h, 0.6))
-            : mix(horizon, ground, pow(-h, 0.4));
+            ? mix(uHorizon, uZenith, pow(h, 0.6))
+            : mix(uHorizon, uGround, pow(-h, 0.4));
           gl_FragColor = vec4(color, 1.0);
         }
       `,
@@ -52,6 +61,17 @@ export class Sky {
     this.seagulls = new THREE.Group();
     this.scene.add(this.seagulls);
     this.createSeagulls();
+  }
+
+  /** Update sky colors for zone transitions */
+  setColors(
+    zenith: [number, number, number],
+    horizon: [number, number, number],
+    ground: [number, number, number],
+  ): void {
+    this.skyUniforms.uZenith.value.set(zenith[0], zenith[1], zenith[2]);
+    this.skyUniforms.uHorizon.value.set(horizon[0], horizon[1], horizon[2]);
+    this.skyUniforms.uGround.value.set(ground[0], ground[1], ground[2]);
   }
 
   private createClouds(): void {

@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import type { ZoneId } from '@data/ZoneData';
 
-/** Procedural beach decorations placed alongside the track */
+/** Procedural decorations placed alongside the track — zone-aware */
 export class BeachDecor {
   private group: THREE.Group;
   private scene: THREE.Scene;
   private totalSpan = 200;
+  currentZone: ZoneId = 'chapadmalal';
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -13,28 +15,70 @@ export class BeachDecor {
     this.populate();
   }
 
+  /** Repopulate decorations for a new zone (called on zone change) */
+  repopulate(): void {
+    while (this.group.children.length > 0) {
+      this.group.remove(this.group.children[0]);
+    }
+    this.populate();
+  }
+
   private populate(): void {
     for (let z = 0; z < this.totalSpan; z += 8 + Math.random() * 10) {
       const side = Math.random() < 0.5 ? -1 : 1;
       const x = side * (4 + Math.random() * 4);
-      const kind = Math.random();
-
-      if (kind < 0.22) {
-        this.group.add(this.createUmbrella(x, z));
-      } else if (kind < 0.36) {
-        this.group.add(this.createSandcastle(x, z));
-      } else if (kind < 0.50) {
-        this.group.add(this.createBeachChair(x, z));
-      } else if (kind < 0.62) {
-        this.group.add(this.createRock(x, z));
-      } else if (kind < 0.74) {
-        this.group.add(this.createParrilla(x, z));
-      } else if (kind < 0.86) {
-        this.group.add(this.createBanderaArgentina(x, z));
-      } else {
-        this.group.add(this.createTermoMate(x, z));
-      }
+      this.group.add(this.createDecorForZone(x, z));
     }
+  }
+
+  private createDecorForZone(x: number, z: number): THREE.Group {
+    switch (this.currentZone) {
+      case 'rambla': return this.createRamblaDecor(x, z);
+      case 'carilo': return this.createCariloDecor(x, z);
+      case 'rutaCostera': return this.createRutaDecor(x, z);
+      default: return this.createChapadDecor(x, z);
+    }
+  }
+
+  private createChapadDecor(x: number, z: number): THREE.Group {
+    const kind = Math.random();
+    if (kind < 0.22) return this.createUmbrella(x, z);
+    if (kind < 0.36) return this.createSandcastle(x, z);
+    if (kind < 0.50) return this.createBeachChair(x, z);
+    if (kind < 0.62) return this.createRock(x, z);
+    if (kind < 0.74) return this.createParrilla(x, z);
+    if (kind < 0.86) return this.createBanderaArgentina(x, z);
+    return this.createTermoMate(x, z);
+  }
+
+  private createRamblaDecor(x: number, z: number): THREE.Group {
+    const kind = Math.random();
+    if (kind < 0.25) return this.createLampPost(x, z);
+    if (kind < 0.45) return this.createParkBench(x, z);
+    if (kind < 0.60) return this.createTrashCan(x, z);
+    if (kind < 0.75) return this.createFlowerPot(x, z);
+    if (kind < 0.88) return this.createBanderaArgentina(x, z);
+    return this.createTermoMate(x, z);
+  }
+
+  private createCariloDecor(x: number, z: number): THREE.Group {
+    const kind = Math.random();
+    if (kind < 0.30) return this.createPineTree(x, z);
+    if (kind < 0.50) return this.createBush(x, z);
+    if (kind < 0.65) return this.createRock(x, z);
+    if (kind < 0.78) return this.createWoodLog(x, z);
+    if (kind < 0.90) return this.createFern(x, z);
+    return this.createTermoMate(x, z);
+  }
+
+  private createRutaDecor(x: number, z: number): THREE.Group {
+    const kind = Math.random();
+    if (kind < 0.25) return this.createMilestone(x, z);
+    if (kind < 0.45) return this.createFence(x, z);
+    if (kind < 0.60) return this.createWildGrass(x, z);
+    if (kind < 0.75) return this.createRock(x, z);
+    if (kind < 0.88) return this.createBanderaArgentina(x, z);
+    return this.createTermoMate(x, z);
   }
 
   private createUmbrella(x: number, z: number): THREE.Group {
@@ -321,6 +365,263 @@ export class BeachDecor {
 
     g.position.set(x, 0, z);
     g.rotation.y = Math.random() * Math.PI;
+    return g;
+  }
+
+  // ── Zone 2: Rambla decorations ──────────────────────────────────────
+
+  private createLampPost(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.5, roughness: 0.4 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffffcc, emissive: 0xffff88, emissiveIntensity: 0.3, roughness: 0.5 });
+
+    const poleGeo = new THREE.CylinderGeometry(0.05, 0.07, 3.5, 6);
+    const pole = new THREE.Mesh(poleGeo, metalMat);
+    pole.position.y = 1.75;
+    pole.castShadow = true;
+    g.add(pole);
+
+    const armGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 5);
+    armGeo.rotateZ(Math.PI / 2);
+    const arm = new THREE.Mesh(armGeo, metalMat);
+    arm.position.set(0.3, 3.4, 0);
+    g.add(arm);
+
+    const lampGeo = new THREE.SphereGeometry(0.15, 8, 6);
+    const lamp = new THREE.Mesh(lampGeo, lightMat);
+    lamp.position.set(0.55, 3.35, 0);
+    g.add(lamp);
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createParkBench(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.8 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.5, roughness: 0.4 });
+
+    const seatGeo = new THREE.BoxGeometry(1.2, 0.06, 0.4);
+    const seat = new THREE.Mesh(seatGeo, woodMat);
+    seat.position.y = 0.45;
+    seat.castShadow = true;
+    g.add(seat);
+
+    const backGeo = new THREE.BoxGeometry(1.2, 0.4, 0.04);
+    const back = new THREE.Mesh(backGeo, woodMat);
+    back.position.set(0, 0.7, -0.18);
+    back.castShadow = true;
+    g.add(back);
+
+    const legGeo = new THREE.BoxGeometry(0.06, 0.45, 0.3);
+    for (const lx of [-0.5, 0.5]) {
+      const leg = new THREE.Mesh(legGeo, metalMat);
+      leg.position.set(lx, 0.22, 0);
+      g.add(leg);
+    }
+
+    g.position.set(x, 0, z);
+    g.rotation.y = Math.random() * Math.PI;
+    return g;
+  }
+
+  private createTrashCan(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const canMat = new THREE.MeshStandardMaterial({ color: 0x336633, roughness: 0.6 });
+
+    const canGeo = new THREE.CylinderGeometry(0.2, 0.25, 0.7, 8);
+    const can = new THREE.Mesh(canGeo, canMat);
+    can.position.y = 0.35;
+    can.castShadow = true;
+    g.add(can);
+
+    const lidGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 8);
+    const lid = new THREE.Mesh(lidGeo, canMat);
+    lid.position.y = 0.72;
+    g.add(lid);
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createFlowerPot(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const potMat = new THREE.MeshStandardMaterial({ color: 0xb85533, roughness: 0.8 });
+    const flowerColors = [0xff4488, 0xffaa22, 0xff2244, 0xcc44ff];
+    const flowerMat = new THREE.MeshStandardMaterial({
+      color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
+      roughness: 0.6,
+    });
+
+    const potGeo = new THREE.CylinderGeometry(0.25, 0.18, 0.35, 8);
+    const pot = new THREE.Mesh(potGeo, potMat);
+    pot.position.y = 0.18;
+    pot.castShadow = true;
+    g.add(pot);
+
+    for (let i = 0; i < 5; i++) {
+      const fGeo = new THREE.SphereGeometry(0.08, 5, 4);
+      const f = new THREE.Mesh(fGeo, flowerMat);
+      const angle = (i / 5) * Math.PI * 2;
+      f.position.set(Math.cos(angle) * 0.12, 0.42, Math.sin(angle) * 0.12);
+      g.add(f);
+    }
+
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0x33aa33, roughness: 0.7 });
+    const leafGeo = new THREE.SphereGeometry(0.18, 6, 5);
+    const leaves = new THREE.Mesh(leafGeo, stemMat);
+    leaves.position.y = 0.40;
+    leaves.scale.y = 0.6;
+    g.add(leaves);
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  // ── Zone 3: Carilo decorations ──────────────────────────────────────
+
+  private createPineTree(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.85 });
+    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x1a4a1a, roughness: 0.7 });
+
+    const trunkGeo = new THREE.CylinderGeometry(0.12, 0.18, 2.5, 6);
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = 1.25;
+    trunk.castShadow = true;
+    g.add(trunk);
+
+    for (let i = 0; i < 3; i++) {
+      const radius = 1.0 - i * 0.25;
+      const coneGeo = new THREE.ConeGeometry(radius, 1.2, 7);
+      const cone = new THREE.Mesh(coneGeo, leavesMat);
+      cone.position.y = 2.0 + i * 0.8;
+      cone.castShadow = true;
+      g.add(cone);
+    }
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createBush(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const bushMat = new THREE.MeshStandardMaterial({ color: 0x2d5a1a, roughness: 0.8 });
+
+    const count = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const r = 0.3 + Math.random() * 0.3;
+      const sphereGeo = new THREE.SphereGeometry(r, 7, 5);
+      const sphere = new THREE.Mesh(sphereGeo, bushMat);
+      sphere.position.set(
+        (Math.random() - 0.5) * 0.5,
+        r * 0.7,
+        (Math.random() - 0.5) * 0.5,
+      );
+      sphere.scale.y = 0.7;
+      sphere.castShadow = true;
+      g.add(sphere);
+    }
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createWoodLog(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const logMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
+
+    const logGeo = new THREE.CylinderGeometry(0.15, 0.18, 1.5, 6);
+    logGeo.rotateZ(Math.PI / 2 + (Math.random() - 0.5) * 0.3);
+    const log = new THREE.Mesh(logGeo, logMat);
+    log.position.y = 0.15;
+    log.castShadow = true;
+    g.add(log);
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createFern(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const fernMat = new THREE.MeshStandardMaterial({ color: 0x3a7a2a, roughness: 0.7, side: THREE.DoubleSide });
+
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const leafGeo = new THREE.PlaneGeometry(0.2, 0.8);
+      const leaf = new THREE.Mesh(leafGeo, fernMat);
+      leaf.position.set(Math.cos(angle) * 0.15, 0.4, Math.sin(angle) * 0.15);
+      leaf.rotation.set(-0.6, angle, 0);
+      g.add(leaf);
+    }
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  // ── Zone 4: Ruta Costera decorations ────────────────────────────────
+
+  private createMilestone(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const postMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.6 });
+    const signMat = new THREE.MeshStandardMaterial({ color: 0x3366aa, roughness: 0.5 });
+
+    const postGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.5, 5);
+    const post = new THREE.Mesh(postGeo, postMat);
+    post.position.y = 0.75;
+    post.castShadow = true;
+    g.add(post);
+
+    const signGeo = new THREE.BoxGeometry(0.6, 0.3, 0.04);
+    const sign = new THREE.Mesh(signGeo, signMat);
+    sign.position.y = 1.4;
+    sign.castShadow = true;
+    g.add(sign);
+
+    g.position.set(x, 0, z);
+    return g;
+  }
+
+  private createFence(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a7050, roughness: 0.85 });
+
+    for (let i = 0; i < 3; i++) {
+      const postGeo = new THREE.CylinderGeometry(0.04, 0.05, 0.8, 5);
+      const post = new THREE.Mesh(postGeo, woodMat);
+      post.position.set(i * 0.8 - 0.8, 0.4, 0);
+      post.castShadow = true;
+      g.add(post);
+    }
+
+    const railGeo = new THREE.CylinderGeometry(0.02, 0.02, 2.0, 5);
+    railGeo.rotateZ(Math.PI / 2);
+    const rail = new THREE.Mesh(railGeo, woodMat);
+    rail.position.y = 0.6;
+    g.add(rail);
+
+    g.position.set(x, 0, z);
+    g.rotation.y = Math.random() * Math.PI;
+    return g;
+  }
+
+  private createWildGrass(x: number, z: number): THREE.Group {
+    const g = new THREE.Group();
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x8a9a40, roughness: 0.8, side: THREE.DoubleSide });
+
+    for (let i = 0; i < 8; i++) {
+      const bladeGeo = new THREE.PlaneGeometry(0.05, 0.5 + Math.random() * 0.3);
+      const blade = new THREE.Mesh(bladeGeo, grassMat);
+      blade.position.set(
+        (Math.random() - 0.5) * 0.6,
+        0.25,
+        (Math.random() - 0.5) * 0.6,
+      );
+      blade.rotation.set(0, Math.random() * Math.PI, (Math.random() - 0.5) * 0.3);
+      g.add(blade);
+    }
+
+    g.position.set(x, 0, z);
     return g;
   }
 
