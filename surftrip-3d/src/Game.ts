@@ -8,6 +8,9 @@ import { CollectibleSystem } from '@gameplay/CollectibleSystem';
 import { ScoreManager } from '@gameplay/ScoreManager';
 import { DifficultyManager } from '@gameplay/DifficultyManager';
 import { Environment } from '@world/Environment';
+import { ParticleSystem } from '@vfx/ParticleSystem';
+import { SandTrail } from '@vfx/SandTrail';
+import { ScreenShake } from '@vfx/ScreenEffects';
 import { lerp } from '@utils/MathUtils';
 
 type GameState = 'menu' | 'playing' | 'gameover';
@@ -23,6 +26,10 @@ const highScoreEl = document.getElementById('high-score')!;
 const btnPlay = document.getElementById('btn-play')!;
 const btnRestart = document.getElementById('btn-restart')!;
 
+// Colors for VFX
+const GOLD = new THREE.Color(0xffd700);
+const RED = new THREE.Color(0xff4444);
+
 export class Game {
   private sceneManager: SceneManager;
   private input: InputManager | null = null;
@@ -34,11 +41,18 @@ export class Game {
   private difficulty: DifficultyManager;
   private environment: Environment;
 
+  // VFX
+  private collectParticles: ParticleSystem;
+  private crashParticles: ParticleSystem;
+  private sandTrail: SandTrail;
+  private screenShake: ScreenShake;
+
   private state: GameState = 'menu';
   private animId = 0;
 
   // Camera tracking
   private cameraTargetZ = 0;
+  private baseFov = 60;
 
   constructor() {
     this.sceneManager = new SceneManager();
@@ -50,6 +64,12 @@ export class Game {
     this.score = new ScoreManager();
     this.difficulty = new DifficultyManager();
     this.environment = new Environment(this.sceneManager.scene);
+
+    // VFX
+    this.collectParticles = new ParticleSystem(this.sceneManager.scene);
+    this.crashParticles = new ParticleSystem(this.sceneManager.scene);
+    this.sandTrail = new SandTrail(this.sceneManager.scene);
+    this.screenShake = new ScreenShake();
 
     // UI
     hiLabel.textContent = `HI: ${this.score.hiScore}`;
@@ -75,6 +95,7 @@ export class Game {
     this.collectibles.reset();
     this.score.reset();
     this.difficulty.reset();
+    this.screenShake.reset();
 
     // UI
     startScreen.classList.add('hidden');
@@ -104,6 +125,18 @@ export class Game {
     this.collectibles.update(this.player.posZ, dt);
     this.environment.update(this.player.posZ);
 
+    // VFX
+    this.collectParticles.update(dt);
+    this.crashParticles.update(dt);
+    this.sandTrail.update(
+      dt,
+      this.player.mesh.position.x,
+      this.player.mesh.position.y,
+      this.player.posZ,
+      this.player.state === 'running' || this.player.state === 'sliding',
+    );
+    this.screenShake.update(dt);
+
     // Score from distance
     this.score.addDistance(speed * dt * 0.5);
 
@@ -115,6 +148,13 @@ export class Game {
     );
     if (collected > 0) {
       this.score.addPoints(collected);
+      // Gold sparkle effect at player position
+      this.collectParticles.emit(
+        this.player.mesh.position.x,
+        this.player.mesh.position.y + 1,
+        this.player.posZ,
+        GOLD,
+      );
     }
 
     // Collision detection
@@ -123,7 +163,7 @@ export class Game {
       return;
     }
 
-    // Camera follow
+    // Camera follow with dynamic FOV
     this.updateCamera(dt);
 
     // HUD
@@ -176,12 +216,19 @@ export class Game {
 
   private updateCamera(dt: number): void {
     const cam = this.sceneManager.camera;
+
+    // Dynamic FOV — widens as speed increases (speed rush feeling)
+    const speedRatio = (this.difficulty.speed - 12) / (30 - 12);
+    const targetFov = this.baseFov + speedRatio * 12; // 60 → 72
+    cam.fov = lerp(cam.fov, targetFov, 2 * dt);
+    cam.updateProjectionMatrix();
+
     // Camera follows the player's Z position smoothly
     this.cameraTargetZ = this.player.posZ;
     const camZ = lerp(cam.position.z, this.cameraTargetZ - 10, 5 * dt);
     cam.position.set(
-      lerp(cam.position.x, this.player.mesh.position.x * 0.3, 3 * dt),
-      lerp(cam.position.y, 6 + this.player.mesh.position.y * 0.3, 3 * dt),
+      lerp(cam.position.x, this.player.mesh.position.x * 0.3, 3 * dt) + this.screenShake.offsetX,
+      lerp(cam.position.y, 6 + this.player.mesh.position.y * 0.3, 3 * dt) + this.screenShake.offsetY,
       camZ,
     );
     cam.lookAt(
@@ -196,6 +243,31 @@ export class Game {
     cancelAnimationFrame(this.animId);
     this.player.die();
 
+    // VFX: crash particles + screen shake
+    this.crashParticles.emit(
+      this.player.mesh.position.x,
+      this.player.mesh.position.y + 0.8,
+      this.player.posZ,
+      RED,
+    );
+    this.screenShake.trigger(0.6);
+
+    // Render a few more frames for the VFX to play out
+    let frames = 0;
+    const crashAnim = (): void => {
+      frames++;
+      const dt = 0.016;
+      this.crashParticles.update(dt);
+      this.screenShake.update(dt);
+      this.updateCamera(dt);
+      this.sceneManager.render();
+      if (frames < 30) requestAnimationFrame(crashAnim);
+      else this.showGameOverUI();
+    };
+    crashAnim();
+  }
+
+  private showGameOverUI(): void {
     const isNewRecord = this.score.finalise();
 
     finalScoreEl.textContent = `Puntos: ${this.score.score}`;
@@ -216,5 +288,8 @@ export class Game {
     this.obstacles.dispose();
     this.collectibles.dispose();
     this.environment.dispose();
+    this.collectParticles.dispose();
+    this.crashParticles.dispose();
+    this.sandTrail.dispose();
   }
 }
