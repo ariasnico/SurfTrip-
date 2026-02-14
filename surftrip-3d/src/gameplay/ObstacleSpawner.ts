@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { ObjectPool } from '@utils/ObjectPool';
 import { randInt, randFloat } from '@utils/MathUtils';
 import { LANES } from './LaneSystem';
+import { createLowObstacle, createHighObstacle } from '@world/ObstacleModels';
 
 export interface Obstacle {
   mesh: THREE.Mesh;
@@ -11,18 +11,11 @@ export interface Obstacle {
   active: boolean;
 }
 
-const OBSTACLE_COLORS: Record<string, number> = {
-  low: 0x8b7355, // rock brown
-  high: 0xcc4444, // red barrier
-};
-
 const MIN_INTERVAL = 15; // min distance between obstacles (world units)
 const MAX_INTERVAL = 30;
 
 export class ObstacleSpawner {
   private obstacles: Obstacle[] = [];
-  private poolLow: ObjectPool<THREE.Mesh>;
-  private poolHigh: ObjectPool<THREE.Mesh>;
   private nextSpawnZ = 30; // start spawning ahead of the player
   private group: THREE.Group;
   private scene: THREE.Scene;
@@ -31,33 +24,6 @@ export class ObstacleSpawner {
     this.scene = scene;
     this.group = new THREE.Group();
     this.scene.add(this.group);
-
-    // Low obstacle (jump over): wide box on the ground
-    this.poolLow = new ObjectPool<THREE.Mesh>(
-      () => {
-        const geo = new THREE.BoxGeometry(1.8, 0.9, 0.8);
-        const mat = new THREE.MeshStandardMaterial({ color: OBSTACLE_COLORS.low, roughness: 0.8 });
-        const mesh = new THREE.Mesh(geo, mat) as THREE.Mesh;
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        return mesh;
-      },
-      (m) => { m.visible = true; },
-      6,
-    );
-
-    // High obstacle (slide under): tall thin barrier
-    this.poolHigh = new ObjectPool<THREE.Mesh>(
-      () => {
-        const geo = new THREE.BoxGeometry(2.0, 1.2, 0.3);
-        const mat = new THREE.MeshStandardMaterial({ color: OBSTACLE_COLORS.high, roughness: 0.5 });
-        const mesh = new THREE.Mesh(geo, mat) as THREE.Mesh;
-        mesh.castShadow = true;
-        return mesh;
-      },
-      (m) => { m.visible = true; },
-      4,
-    );
   }
 
   update(playerZ: number, _speed: number): void {
@@ -74,8 +40,6 @@ export class ObstacleSpawner {
         obs.active = false;
         obs.mesh.visible = false;
         this.group.remove(obs.mesh);
-        if (obs.type === 'low') this.poolLow.release(obs.mesh);
-        else this.poolHigh.release(obs.mesh);
       }
     }
 
@@ -88,7 +52,7 @@ export class ObstacleSpawner {
   private spawn(z: number): void {
     const laneIdx = randInt(0, 2);
     const type = Math.random() < 0.7 ? 'low' : 'high';
-    const mesh = type === 'low' ? this.poolLow.get() : this.poolHigh.get();
+    const mesh = type === 'low' ? createLowObstacle() : createHighObstacle();
 
     const x = LANES[laneIdx];
     if (type === 'low') {
@@ -113,8 +77,6 @@ export class ObstacleSpawner {
     for (const obs of this.obstacles) {
       obs.mesh.visible = false;
       this.group.remove(obs.mesh);
-      if (obs.type === 'low') this.poolLow.release(obs.mesh);
-      else this.poolHigh.release(obs.mesh);
     }
     this.obstacles = [];
     this.nextSpawnZ = 30;

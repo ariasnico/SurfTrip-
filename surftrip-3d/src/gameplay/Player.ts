@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { eventBus } from '@core/EventBus';
 import { lerp, clamp } from '@utils/MathUtils';
 import { getLaneX, LANE_CENTER, LANE_LEFT, LANE_RIGHT } from './LaneSystem';
+import { createSurferModel, SurferAnimator } from '@world/SurferModel';
 import type { SwipeDirection } from '@core/InputManager';
 
 const GRAVITY = 25;
@@ -13,7 +14,6 @@ export type PlayerState = 'running' | 'jumping' | 'sliding' | 'dead';
 
 export class Player {
   readonly mesh: THREE.Group;
-  private body: THREE.Mesh;
   private laneIndex = LANE_CENTER;
   private targetX: number;
   private velocityY = 0;
@@ -28,34 +28,15 @@ export class Player {
   posZ = 0;
 
   private scene: THREE.Scene;
+  private animator: SurferAnimator;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    this.mesh = new THREE.Group();
 
-    // Body (placeholder box — will be replaced by GLTF model)
-    const bodyGeo = new THREE.BoxGeometry(0.7, 1.6, 0.5);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2299dd });
-    this.body = new THREE.Mesh(bodyGeo, bodyMat);
-    this.body.castShadow = true;
-    this.body.position.y = 0.8; // half-height above ground
-    this.mesh.add(this.body);
-
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
-    const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc88 });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.9;
-    head.castShadow = true;
-    this.mesh.add(head);
-
-    // Surfboard under feet
-    const boardGeo = new THREE.BoxGeometry(0.5, 0.08, 1.4);
-    const boardMat = new THREE.MeshStandardMaterial({ color: 0xff6b35 });
-    const board = new THREE.Mesh(boardGeo, boardMat);
-    board.position.y = 0.04;
-    board.castShadow = true;
-    this.mesh.add(board);
+    // Low-poly surfer model with articulated limbs
+    const surfer = createSurferModel();
+    this.mesh = surfer.group;
+    this.animator = new SurferAnimator(surfer);
 
     this.targetX = getLaneX(this.laneIndex);
     this.mesh.position.set(this.targetX, 0, 0);
@@ -141,6 +122,9 @@ export class Player {
         this.endSlide();
       }
     }
+
+    // Animate surfer limbs
+    this.animator.update(dt, this.state, speed);
   }
 
   die(): void {
@@ -157,6 +141,7 @@ export class Player {
     this.state = 'running';
     this.posZ = 0;
     this.slideTimer = 0;
+    this.animator.reset();
   }
 
   /** AABB hitbox in world coordinates */
