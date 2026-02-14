@@ -15,6 +15,8 @@ import { Environment } from '@world/Environment';
 import { ParticleSystem } from '@vfx/ParticleSystem';
 import { SandTrail } from '@vfx/SandTrail';
 import { ScreenShake } from '@vfx/ScreenEffects';
+import { AmbientParticles } from '@vfx/AmbientParticles';
+import { ZONE_GRADING } from '@vfx/PostProcessing';
 import { lerp } from '@utils/MathUtils';
 import { audioManager } from '@core/AudioManager';
 import { eventBus } from '@core/EventBus';
@@ -105,6 +107,7 @@ export class Game {
   private powerUpParticles: ParticleSystem;
   private sandTrail: SandTrail;
   private screenShake: ScreenShake;
+  private ambientParticles: AmbientParticles;
 
   private state: GameState = 'menu';
   private animId = 0;
@@ -147,6 +150,18 @@ export class Game {
     this.powerUpParticles = new ParticleSystem(this.sceneManager.scene);
     this.sandTrail = new SandTrail(this.sceneManager.scene);
     this.screenShake = new ScreenShake();
+    this.ambientParticles = new AmbientParticles(this.sceneManager.scene);
+
+    // Apply initial zone lighting
+    const initialZone = this.zones.currentZone;
+    this.environment.applyZoneLighting(
+      initialZone.lighting,
+      this.sceneManager.sunLight,
+      this.sceneManager.ambientLight,
+      this.sceneManager.hemiLight,
+    );
+    this.sceneManager.setZoneGrading(ZONE_GRADING[initialZone.id]);
+    this.sceneManager.setBloomStrength(initialZone.lighting.bloomStrength);
 
     // UI
     hiLabel.textContent = `HI: ${this.score.hiScore}`;
@@ -205,10 +220,21 @@ export class Game {
     this.zones.reset();
     this.obstacles.currentZone = 'chapadmalal';
 
-    // Apply initial zone colors
+    // Apply initial zone colors and lighting
     const initialColors = this.zones.getBlendedColors();
     this.environment.applyZoneColors(initialColors);
     this.track.setColors(initialColors.trackSand, initialColors.trackBase, initialColors.trackDivider, initialColors.trackEdge);
+
+    const initialZone = this.zones.currentZone;
+    this.environment.applyZoneLighting(
+      initialZone.lighting,
+      this.sceneManager.sunLight,
+      this.sceneManager.ambientLight,
+      this.sceneManager.hemiLight,
+    );
+    this.sceneManager.setZoneGrading(ZONE_GRADING[initialZone.id]);
+    this.sceneManager.setBloomStrength(initialZone.lighting.bloomStrength);
+    this.ambientParticles.setZone('chapadmalal');
 
     // UI
     startScreen.classList.add('hidden');
@@ -264,8 +290,20 @@ export class Game {
       this.powerUps.isMagnetActive(),
       this.player.mesh.position.x,
     );
-    this.environment.update(this.player.posZ, dt);
+    this.environment.update(this.player.posZ, dt, this.sceneManager.camera);
     this.powerUps.update(this.player.posZ, dt);
+
+    // Phase 6: Post-processing time update + sun shadow follow
+    this.sceneManager.updatePostProcessing(dt);
+    this.sceneManager.updateSunTarget(this.player.posZ);
+
+    // Phase 6: Ambient particles
+    this.ambientParticles.update(
+      dt,
+      this.player.mesh.position.x,
+      this.player.mesh.position.y,
+      this.player.posZ,
+    );
 
     // Phase 7: Zone transitions
     this.updateZones(dt);
@@ -442,6 +480,47 @@ export class Game {
       const colors = this.zones.getBlendedColors();
       this.environment.applyZoneColors(colors);
       this.track.setColors(colors.trackSand, colors.trackBase, colors.trackDivider, colors.trackEdge);
+
+      // Phase 6: Blend zone lighting, grading and bloom during transitions
+      if (this.zones.isTransitioning && this.zones.nextZone) {
+        const curLighting = this.zones.currentZone.lighting;
+        const nxtLighting = this.zones.nextZone.lighting;
+        const t = this.zones.progress;
+
+        // Interpolate lighting values
+        const blendedLighting = {
+          sunColor: lerpHexColor(curLighting.sunColor, nxtLighting.sunColor, t),
+          sunIntensity: curLighting.sunIntensity + (nxtLighting.sunIntensity - curLighting.sunIntensity) * t,
+          sunPosition: [
+            curLighting.sunPosition[0] + (nxtLighting.sunPosition[0] - curLighting.sunPosition[0]) * t,
+            curLighting.sunPosition[1] + (nxtLighting.sunPosition[1] - curLighting.sunPosition[1]) * t,
+            curLighting.sunPosition[2] + (nxtLighting.sunPosition[2] - curLighting.sunPosition[2]) * t,
+          ] as [number, number, number],
+          ambientIntensity: curLighting.ambientIntensity + (nxtLighting.ambientIntensity - curLighting.ambientIntensity) * t,
+          hemisphereGround: lerpHexColor(curLighting.hemisphereGround, nxtLighting.hemisphereGround, t),
+          sunGlow: [
+            curLighting.sunGlow[0] + (nxtLighting.sunGlow[0] - curLighting.sunGlow[0]) * t,
+            curLighting.sunGlow[1] + (nxtLighting.sunGlow[1] - curLighting.sunGlow[1]) * t,
+            curLighting.sunGlow[2] + (nxtLighting.sunGlow[2] - curLighting.sunGlow[2]) * t,
+          ] as [number, number, number],
+          bloomStrength: curLighting.bloomStrength + (nxtLighting.bloomStrength - curLighting.bloomStrength) * t,
+        };
+
+        this.environment.applyZoneLighting(
+          blendedLighting,
+          this.sceneManager.sunLight,
+          this.sceneManager.ambientLight,
+          this.sceneManager.hemiLight,
+        );
+        this.sceneManager.setBloomStrength(blendedLighting.bloomStrength);
+
+        // Blend color grading
+        const curGrading = ZONE_GRADING[this.zones.currentZone.id];
+        const nxtGrading = ZONE_GRADING[this.zones.nextZone.id];
+        if (curGrading && nxtGrading) {
+          this.sceneManager.setBlendedZoneGrading(curGrading, nxtGrading, t);
+        }
+      }
     }
 
     // When a new zone transition starts, show zone name and update spawners
@@ -457,10 +536,21 @@ export class Game {
       if (nextZone) {
         this.obstacles.currentZone = nextZone.id;
         this.environment.switchDecorZone(nextZone.id);
+        this.ambientParticles.setZone(nextZone.id);
 
         // Update music
         const musicCfg = this.zones.getBlendedMusicConfig();
         audioManager.setMusicConfig(musicCfg.chords, musicCfg.tempo, musicCfg.bassType);
+
+        // Apply final lighting for the new zone (used after transition completes)
+        this.environment.applyZoneLighting(
+          nextZone.lighting,
+          this.sceneManager.sunLight,
+          this.sceneManager.ambientLight,
+          this.sceneManager.hemiLight,
+        );
+        this.sceneManager.setZoneGrading(ZONE_GRADING[nextZone.id]);
+        this.sceneManager.setBloomStrength(nextZone.lighting.bloomStrength);
       }
     }
 
@@ -681,5 +771,16 @@ export class Game {
     this.crashParticles.dispose();
     this.powerUpParticles.dispose();
     this.sandTrail.dispose();
+    this.ambientParticles.dispose();
   }
+}
+
+/** Linearly interpolate between two hex colors */
+function lerpHexColor(a: number, b: number, t: number): number {
+  const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+  const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+  const r = Math.round(ar + (br - ar) * t);
+  const g = Math.round(ag + (bg - ag) * t);
+  const bl = Math.round(ab + (bb - ab) * t);
+  return (r << 16) | (g << 8) | bl;
 }

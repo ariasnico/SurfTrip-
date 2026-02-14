@@ -52,13 +52,51 @@ export function createSurferModel(): {
   head.castShadow = true;
   group.add(head);
 
-  // --- Hair (messy beach hair) ---
+  // --- Eyes ---
+  const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+  const pupilMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 });
+  const eyeGeo = new THREE.SphereGeometry(0.045, 6, 6);
+  const pupilGeo = new THREE.SphereGeometry(0.025, 6, 6);
+
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(eyeGeo, eyeWhiteMat);
+    eye.position.set(side * 0.08, 1.74, 0.18);
+    group.add(eye);
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.set(side * 0.08, 1.74, 0.21);
+    group.add(pupil);
+  }
+
+  // --- Eyebrows (determined expression) ---
+  const browMat = new THREE.MeshStandardMaterial({ color: 0x3a2512, roughness: 0.8 });
+  const browGeo = new THREE.BoxGeometry(0.1, 0.02, 0.03);
+  for (const side of [-1, 1]) {
+    const brow = new THREE.Mesh(browGeo, browMat);
+    brow.position.set(side * 0.08, 1.79, 0.18);
+    brow.rotation.z = side * -0.15; // slightly angled inward → determined look
+    group.add(brow);
+  }
+
+  // --- Hair (messy beach hair with more volume) ---
   const hairGeo = new THREE.SphereGeometry(0.25, 8, 6);
   const hair = new THREE.Mesh(hairGeo, hairMat);
   hair.position.y = 1.82;
   hair.scale.set(1, 0.7, 1.1);
   hair.castShadow = true;
   group.add(hair);
+
+  // Extra hair volume
+  const hairGeo2 = new THREE.SphereGeometry(0.2, 6, 5);
+  const hair2 = new THREE.Mesh(hairGeo2, hairMat);
+  hair2.position.set(0, 1.86, -0.08);
+  hair2.scale.set(1.1, 0.6, 1.2);
+  group.add(hair2);
+
+  const hairGeo3 = new THREE.SphereGeometry(0.15, 6, 5);
+  const hair3 = new THREE.Mesh(hairGeo3, hairMat);
+  hair3.position.set(0.05, 1.85, 0.05);
+  hair3.scale.set(0.9, 0.5, 0.8);
+  group.add(hair3);
 
   // --- Arms ---
   const armGeo = new THREE.BoxGeometry(0.14, 0.55, 0.14);
@@ -106,12 +144,24 @@ export function createSurferModel(): {
   sol.rotation.x = -Math.PI / 2;
   group.add(sol);
 
-  // Board fin
+  // Board fins (thruster setup: 3 fins)
   const finGeo = new THREE.BoxGeometry(0.04, 0.12, 0.15);
-  const fin = new THREE.Mesh(finGeo, solDeMayo);
-  fin.position.set(0, -0.03, -0.7);
-  fin.castShadow = true;
-  group.add(fin);
+  const centerFin = new THREE.Mesh(finGeo, solDeMayo);
+  centerFin.position.set(0, -0.03, -0.7);
+  centerFin.castShadow = true;
+  group.add(centerFin);
+
+  const leftFin = new THREE.Mesh(finGeo, solDeMayo);
+  leftFin.position.set(-0.12, -0.03, -0.55);
+  leftFin.rotation.y = 0.2;
+  leftFin.scale.set(0.8, 0.8, 0.8);
+  group.add(leftFin);
+
+  const rightFin = new THREE.Mesh(finGeo, solDeMayo);
+  rightFin.position.set(0.12, -0.03, -0.55);
+  rightFin.rotation.y = -0.2;
+  rightFin.scale.set(0.8, 0.8, 0.8);
+  group.add(rightFin);
 
   return { group, leftArm, rightArm, leftLeg, rightLeg, board, hair };
 }

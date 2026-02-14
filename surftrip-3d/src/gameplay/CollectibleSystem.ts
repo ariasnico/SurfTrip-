@@ -3,6 +3,41 @@ import { ObjectPool } from '@utils/ObjectPool';
 import { randInt, randFloat, lerp } from '@utils/MathUtils';
 import { LANES } from './LaneSystem';
 
+/** Create a recognizable medialuna (croissant) mesh */
+function createMedialunaMesh(): THREE.Mesh {
+  // Use a LatheGeometry with a custom crescent profile
+  // Profile: elliptical cross-section that tapers at the ends
+  const points: THREE.Vector2[] = [];
+  const segments = 12;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const angle = t * Math.PI; // 0 to PI
+    // Cross-section: ellipse that gets thinner at edges
+    const r = Math.sin(angle) * 0.09 + 0.03; // radius tapers at endpoints
+    const y = (t - 0.5) * 0.35; // spread along Y
+    points.push(new THREE.Vector2(r, y));
+  }
+
+  // Lathe only half-turn for crescent shape
+  const geo = new THREE.LatheGeometry(points, 16, 0, Math.PI);
+
+  // Main golden dough material with emissive for bloom
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xd4923a,
+    roughness: 0.4,
+    metalness: 0.05,
+    emissive: 0xc47f2a,
+    emissiveIntensity: 0.2,
+  });
+
+  const group = new THREE.Mesh(geo, mat);
+  group.castShadow = true;
+  // Scale up for visibility and rotate to face player
+  group.scale.set(1.35, 1.35, 1.35);
+  group.rotation.x = -Math.PI / 2;
+  return group;
+}
+
 export interface Collectible {
   mesh: THREE.Mesh;
   lane: number;
@@ -33,20 +68,7 @@ export class CollectibleSystem {
     // Collectible = factura / medialuna (Argentine pastry)
     this.pool = new ObjectPool<THREE.Mesh>(
       () => {
-        // Crescent shape using a torus segment
-        const geo = new THREE.TorusGeometry(0.22, 0.1, 8, 12, Math.PI);
-        const mat = new THREE.MeshStandardMaterial({
-          color: 0xd4923a,
-          roughness: 0.55,
-          metalness: 0.05,
-          emissive: 0xc47f2a,
-          emissiveIntensity: 0.12,
-        });
-        const mesh = new THREE.Mesh(geo, mat) as THREE.Mesh;
-        mesh.castShadow = true;
-        // Rotate so the crescent faces upward
-        mesh.rotation.x = -Math.PI / 2;
-        return mesh;
+        return createMedialunaMesh();
       },
       (m) => { m.visible = true; },
       12,
@@ -63,8 +85,9 @@ export class CollectibleSystem {
     // Animate rotation + deactivate behind + magnet attraction
     for (const item of this.items) {
       if (!item.active) continue;
-      // Spin
+      // Spin + wobble
       item.mesh.rotation.y += 2.5 * dt;
+      item.mesh.rotation.z = Math.sin(Date.now() * 0.003 + item.worldZ * 0.5) * 0.1;
       // Bob up/down
       const baseY = 1.0 + Math.sin(Date.now() * 0.004 + item.worldZ) * 0.2;
 
