@@ -1,83 +1,66 @@
 import * as THREE from 'three';
+import { Ocean } from './Ocean';
+import { Sky } from './Sky';
+import { BeachDecor } from './BeachDecor';
+import { createPalmTree } from './PalmTree';
 
 export class Environment {
-  private ocean: THREE.Mesh;
-  private sideDecorations: THREE.Group;
+  private ocean: Ocean;
+  private sky: Sky;
+  private beachDecor: BeachDecor;
+  private palmTrees: THREE.Group;
   private scene: THREE.Scene;
+  private palmSpan = 200;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    // Sky color (background matches fog)
-    this.scene.background = new THREE.Color(0x87ceeb);
 
-    // Ocean plane on the right side
-    const oceanGeo = new THREE.PlaneGeometry(80, 300);
-    oceanGeo.rotateX(-Math.PI / 2);
-    const oceanMat = new THREE.MeshStandardMaterial({
-      color: 0x3a9ad9,
-      roughness: 0.2,
-      metalness: 0.1,
-      transparent: true,
-      opacity: 0.85,
-    });
-    this.ocean = new THREE.Mesh(oceanGeo, oceanMat);
-    this.ocean.position.set(45, -0.15, 80);
-    this.ocean.receiveShadow = true;
-    this.scene.add(this.ocean);
+    // Animated ocean with shader
+    this.ocean = new Ocean(this.scene);
 
-    // Side decorations (palmeras placeholder = green cones + brown cylinders)
-    this.sideDecorations = new THREE.Group();
-    this.scene.add(this.sideDecorations);
-    this.createSideDecor();
+    // Gradient sky + clouds + seagulls
+    this.sky = new Sky(this.scene);
+
+    // Beach decorations (umbrellas, sandcastles, chairs, rocks)
+    this.beachDecor = new BeachDecor(this.scene);
+
+    // Palm trees on both sides
+    this.palmTrees = new THREE.Group();
+    this.scene.add(this.palmTrees);
+    this.createPalms();
   }
 
-  private createSideDecor(): void {
-    const trunkGeo = new THREE.CylinderGeometry(0.15, 0.2, 3, 6);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b6914 });
-    const leavesGeo = new THREE.ConeGeometry(1.2, 2.5, 6);
-    const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2d8b46 });
-
-    // Place trees on both sides of the track, spaced out
-    for (let z = 0; z < 180; z += 12) {
+  private createPalms(): void {
+    for (let z = 0; z < this.palmSpan; z += 10 + Math.random() * 6) {
       for (const side of [-1, 1]) {
-        const xOffset = 5 + Math.random() * 3;
-        const tree = new THREE.Group();
-
-        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-        trunk.position.y = 1.5;
-        trunk.castShadow = true;
-        tree.add(trunk);
-
-        const leaves = new THREE.Mesh(leavesGeo, leavesMat);
-        leaves.position.y = 4;
-        leaves.castShadow = true;
-        tree.add(leaves);
-
+        const xOffset = 5.5 + Math.random() * 3;
+        const tree = createPalmTree();
         tree.position.set(side * xOffset, 0, z);
-        // Slight random rotation and scale
-        tree.rotation.y = Math.random() * Math.PI;
-        const s = 0.8 + Math.random() * 0.5;
+        tree.rotation.y = Math.random() * Math.PI * 2;
+        const s = 0.7 + Math.random() * 0.5;
         tree.scale.setScalar(s);
-
-        this.sideDecorations.add(tree);
+        this.palmTrees.add(tree);
       }
     }
   }
 
-  update(playerZ: number): void {
-    // Move ocean to follow the player
-    this.ocean.position.z = playerZ + 80;
+  update(playerZ: number, dt: number): void {
+    this.ocean.update(dt, playerZ);
+    this.sky.update(dt, playerZ);
+    this.beachDecor.update(playerZ);
 
-    // Recycle side decorations
-    for (const child of this.sideDecorations.children) {
+    // Recycle palm trees
+    for (const child of this.palmTrees.children) {
       if (child.position.z < playerZ - 20) {
-        child.position.z += 180;
+        child.position.z += this.palmSpan;
       }
     }
   }
 
   dispose(): void {
-    this.scene.remove(this.ocean);
-    this.scene.remove(this.sideDecorations);
+    this.ocean.dispose();
+    this.sky.dispose();
+    this.beachDecor.dispose();
+    this.scene.remove(this.palmTrees);
   }
 }

@@ -123,7 +123,7 @@ export class Game {
     this.track.update(this.player.posZ);
     this.obstacles.update(this.player.posZ, speed);
     this.collectibles.update(this.player.posZ, dt);
-    this.environment.update(this.player.posZ);
+    this.environment.update(this.player.posZ, dt);
 
     // VFX
     this.collectParticles.update(dt);
@@ -183,13 +183,20 @@ export class Game {
     playerBox.max.z += this.player.posZ;
 
     for (const obs of nearby) {
-      // Build obstacle box
+      // Build obstacle box — use userData dimensions if available, fallback to geometry
       const om = obs.mesh;
-      const geo = om.geometry as THREE.BoxGeometry;
-      const params = geo.parameters;
-      const halfW = params.width / 2;
-      const halfH = params.height / 2;
-      const halfD = params.depth / 2;
+      let halfW: number, halfH: number, halfD: number;
+      if (om.userData['boxW']) {
+        halfW = (om.userData['boxW'] as number) / 2;
+        halfH = (om.userData['boxH'] as number) / 2;
+        halfD = (om.userData['boxD'] as number) / 2;
+      } else {
+        const geo = om.geometry as THREE.BoxGeometry;
+        const params = geo.parameters;
+        halfW = params.width / 2;
+        halfH = params.height / 2;
+        halfD = params.depth / 2;
+      }
       const ox = om.position.x;
       const oy = om.position.y;
       const oz = om.position.z;
