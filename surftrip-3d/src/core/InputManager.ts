@@ -57,8 +57,8 @@ export class InputManager {
     }
 
     if (absDx > absDy) {
-      // Horizontal swipe
-      const dir: SwipeDirection = dx > 0 ? 'right' : 'left';
+      // Horizontal swipe — swap direction to match on-screen movement
+      const dir: SwipeDirection = dx > 0 ? 'left' : 'right';
       eventBus.emit('input:swipe', dir);
     } else {
       // Vertical swipe

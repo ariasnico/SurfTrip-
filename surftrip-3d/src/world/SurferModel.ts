@@ -12,24 +12,31 @@ export function createSurferModel(): {
 } {
   const group = new THREE.Group();
 
-  // Colors
+  // Colors — Argentine themed
   const skinMat = new THREE.MeshStandardMaterial({ color: 0xf4c28a, roughness: 0.7 });
-  const shirtMat = new THREE.MeshStandardMaterial({ color: 0x22aadd, roughness: 0.6 });
-  const shortsMat = new THREE.MeshStandardMaterial({ color: 0xff6b35, roughness: 0.6 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: 0x5c3a1e, roughness: 0.8 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: 0x75aadb, roughness: 0.6 }); // Celeste argentino
+  const shortsMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.6 }); // Dark shorts
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x3a2512, roughness: 0.8 });
   const boardMat = new THREE.MeshStandardMaterial({
-    color: 0xffe156,
+    color: 0x75aadb,
     roughness: 0.35,
     metalness: 0.05,
-  });
-  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xff4444, roughness: 0.5 });
+  }); // Celeste board
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }); // White stripe
+  const solDeMayo = new THREE.MeshStandardMaterial({ color: 0xf6b40e, roughness: 0.4, metalness: 0.1 }); // Sol de Mayo gold
 
-  // --- Torso (shirt) ---
+  // --- Torso (camiseta celeste y blanca) ---
   const torsoGeo = new THREE.BoxGeometry(0.55, 0.7, 0.35);
   const torso = new THREE.Mesh(torsoGeo, shirtMat);
   torso.position.y = 1.15;
   torso.castShadow = true;
   group.add(torso);
+
+  // White stripe across chest (camiseta argentina)
+  const chestStripeGeo = new THREE.BoxGeometry(0.56, 0.2, 0.36);
+  const chestStripe = new THREE.Mesh(chestStripeGeo, stripeMat);
+  chestStripe.position.y = 1.15;
+  group.add(chestStripe);
 
   // --- Shorts ---
   const shortsGeo = new THREE.BoxGeometry(0.55, 0.35, 0.35);
@@ -86,15 +93,22 @@ export function createSurferModel(): {
   board.castShadow = true;
   group.add(board);
 
-  // Board stripe
-  const stripeGeo = new THREE.BoxGeometry(0.1, 0.065, 1.2);
-  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-  stripe.position.y = 0.03;
-  group.add(stripe);
+  // Board white stripes (Argentine flag on board)
+  const boardStripe1Geo = new THREE.BoxGeometry(0.51, 0.065, 0.45);
+  const boardStripe1 = new THREE.Mesh(boardStripe1Geo, stripeMat);
+  boardStripe1.position.y = 0.035;
+  group.add(boardStripe1);
+
+  // Sol de Mayo emblem (golden circle on board)
+  const solGeo = new THREE.CircleGeometry(0.08, 12);
+  const sol = new THREE.Mesh(solGeo, solDeMayo);
+  sol.position.set(0, 0.065, 0.2);
+  sol.rotation.x = -Math.PI / 2;
+  group.add(sol);
 
   // Board fin
   const finGeo = new THREE.BoxGeometry(0.04, 0.12, 0.15);
-  const fin = new THREE.Mesh(finGeo, stripeMat);
+  const fin = new THREE.Mesh(finGeo, solDeMayo);
   fin.position.set(0, -0.03, -0.7);
   fin.castShadow = true;
   group.add(fin);

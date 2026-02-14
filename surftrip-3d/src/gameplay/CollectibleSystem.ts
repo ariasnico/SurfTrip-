@@ -26,19 +26,22 @@ export class CollectibleSystem {
     this.group = new THREE.Group();
     this.scene.add(this.group);
 
-    // Collectible = golden sphere (shell / coin placeholder)
+    // Collectible = factura / medialuna (Argentine pastry)
     this.pool = new ObjectPool<THREE.Mesh>(
       () => {
-        const geo = new THREE.IcosahedronGeometry(0.3, 1);
+        // Crescent shape using a torus segment
+        const geo = new THREE.TorusGeometry(0.22, 0.1, 8, 12, Math.PI);
         const mat = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          roughness: 0.3,
-          metalness: 0.6,
-          emissive: 0xffa500,
-          emissiveIntensity: 0.15,
+          color: 0xd4923a,
+          roughness: 0.55,
+          metalness: 0.05,
+          emissive: 0xc47f2a,
+          emissiveIntensity: 0.12,
         });
         const mesh = new THREE.Mesh(geo, mat) as THREE.Mesh;
         mesh.castShadow = true;
+        // Rotate so the crescent faces upward
+        mesh.rotation.x = -Math.PI / 2;
         return mesh;
       },
       (m) => { m.visible = true; },
