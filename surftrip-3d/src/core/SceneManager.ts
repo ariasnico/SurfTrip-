@@ -9,6 +9,7 @@ export class SceneManager {
   constructor() {
     // Scene
     this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x87ceeb);
     this.scene.fog = new THREE.Fog(0x87ceeb, 40, 120);
 
     // Camera — behind and above the player
