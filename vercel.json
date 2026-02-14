@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd surftrip-3d && npm install && npm run build",
+  "outputDirectory": "docs",
+  "framework": null
+}

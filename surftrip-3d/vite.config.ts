@@ -2,6 +2,13 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
+  // Relative paths so it works on any subdomain/subpath (e.g. GitHub Pages)
+  base: './',
+  // Build output to docs/ for GitHub Pages
+  build: {
+    outDir: path.resolve(__dirname, '..', 'docs'),
+    emptyOutDir: true,
+  },
   resolve: {
     alias: {
       '@core': path.resolve(__dirname, 'src/core'),
