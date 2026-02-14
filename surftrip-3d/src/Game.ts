@@ -12,6 +12,8 @@ import { ParticleSystem } from '@vfx/ParticleSystem';
 import { SandTrail } from '@vfx/SandTrail';
 import { ScreenShake } from '@vfx/ScreenEffects';
 import { lerp } from '@utils/MathUtils';
+import { audioManager } from '@core/AudioManager';
+import { eventBus } from '@core/EventBus';
 
 type GameState = 'menu' | 'playing' | 'gameover';
 
@@ -25,6 +27,7 @@ const finalScoreEl = document.getElementById('final-score')!;
 const highScoreEl = document.getElementById('high-score')!;
 const btnPlay = document.getElementById('btn-play')!;
 const btnRestart = document.getElementById('btn-restart')!;
+const btnSound = document.getElementById('btn-sound')!;
 
 // Colors for VFX
 const GOLD = new THREE.Color(0xffd700);
@@ -54,6 +57,9 @@ export class Game {
   private cameraTargetZ = 0;
   private baseFov = 60;
 
+  // Audio: track previous player state for land/jump SFX
+  private prevPlayerState: string = 'running';
+
   constructor() {
     this.sceneManager = new SceneManager();
     this.input = new InputManager();
@@ -73,14 +79,38 @@ export class Game {
 
     // UI
     hiLabel.textContent = `HI: ${this.score.hiScore}`;
-    btnPlay.addEventListener('click', () => this.start());
-    btnRestart.addEventListener('click', () => this.start());
+    btnPlay.addEventListener('click', () => {
+      audioManager.init();
+      audioManager.play('uiClick');
+      this.start();
+    });
+    btnRestart.addEventListener('click', () => {
+      audioManager.play('uiClick');
+      this.start();
+    });
 
     // Keyboard shortcut to start
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && this.state !== 'playing') {
         e.preventDefault();
+        audioManager.init();
+        audioManager.play('uiClick');
         this.start();
+      }
+    });
+
+    // Sound toggle
+    btnSound.addEventListener('click', () => {
+      audioManager.init();
+      const muted = audioManager.toggleMute();
+      btnSound.textContent = muted ? '🔇' : '🔊';
+    });
+
+    // Lane switch audio
+    eventBus.on('input:swipe', () => {
+      if (this.state === 'playing') {
+        audioManager.play('laneSwitch');
+        audioManager.vibrateLaneSwitch();
       }
     });
 
@@ -104,6 +134,10 @@ export class Game {
 
     this.state = 'playing';
     this.cameraTargetZ = 0;
+    this.prevPlayerState = 'running';
+
+    // Start music
+    audioManager.startMusic();
 
     // Start loop
     if (this.animId) cancelAnimationFrame(this.animId);
@@ -120,6 +154,16 @@ export class Game {
 
     // Update systems
     this.player.update(dt, speed);
+
+    // Audio: detect player state transitions
+    const curState = this.player.state;
+    if (curState !== this.prevPlayerState) {
+      if (curState === 'jumping') audioManager.play('jump');
+      if (curState === 'sliding') audioManager.play('slide');
+      if (curState === 'running' && this.prevPlayerState === 'jumping') audioManager.play('land');
+      this.prevPlayerState = curState;
+    }
+
     this.track.update(this.player.posZ);
     this.obstacles.update(this.player.posZ, speed);
     this.collectibles.update(this.player.posZ, dt);
@@ -148,6 +192,8 @@ export class Game {
     );
     if (collected > 0) {
       this.score.addPoints(collected);
+      audioManager.play('collect');
+      audioManager.vibrateCollect();
       // Gold sparkle effect at player position
       this.collectParticles.emit(
         this.player.mesh.position.x,
@@ -247,6 +293,11 @@ export class Game {
     cancelAnimationFrame(this.animId);
     this.player.die();
 
+    // Audio: crash sound + stop music
+    audioManager.play('crash');
+    audioManager.vibrateCrash();
+    audioManager.stopMusic();
+
     // VFX: crash particles + screen shake
     this.crashParticles.emit(
       this.player.mesh.position.x,
@@ -273,6 +324,10 @@ export class Game {
 
   private showGameOverUI(): void {
     const isNewRecord = this.score.finalise();
+
+    if (isNewRecord) {
+      audioManager.play('highScore');
+    }
 
     finalScoreEl.textContent = `Puntos: ${this.score.score}`;
     highScoreEl.textContent = isNewRecord

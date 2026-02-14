@@ -147,8 +147,31 @@
         box-shadow: 0 4px 15px rgba(46, 204, 85, 0.4);
         min-width: 220px;
       }
+
+      /* Sound toggle */
+      #btn-sound {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        right: 14px;
+        z-index: 25;
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        color: #fff;
+        font-size: 1.2rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+      }
+      #btn-sound:active { transform: scale(0.9); }
     </style>
-    <script type="module" crossorigin src="./assets/index-hfl744rY.js"></script>
+    <script type="module" crossorigin src="./assets/index-C5tZ-tkl.js"></script>
   </head>
   <body>
     <!-- Start Screen -->
@@ -179,6 +202,9 @@
       <p class="high-score" id="high-score">Record: 0</p>
       <button class="btn btn-restart" id="btn-restart">Volver al agua!</button>
     </div>
+
+    <!-- Sound toggle button -->
+    <button id="btn-sound" aria-label="Toggle sound">🔊</button>
 
   </body>
 </html>

@@ -19,7 +19,7 @@ export class InputManager {
   private onTouchStart = (e: TouchEvent): void => {
     // Don't capture touches on UI buttons
     const target = e.target as HTMLElement;
-    if (target.closest('.btn') || target.closest('#start-screen') || target.closest('#game-over')) {
+    if (target.closest('.btn') || target.closest('#start-screen') || target.closest('#game-over') || target.closest('#btn-sound')) {
       return;
     }
     e.preventDefault();
@@ -31,7 +31,7 @@ export class InputManager {
 
   private onTouchEnd = (e: TouchEvent): void => {
     const target = e.target as HTMLElement;
-    if (target.closest('.btn') || target.closest('#start-screen') || target.closest('#game-over')) {
+    if (target.closest('.btn') || target.closest('#start-screen') || target.closest('#game-over') || target.closest('#btn-sound')) {
       return;
     }
     e.preventDefault();
