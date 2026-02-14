@@ -14,7 +14,11 @@ type SoundName =
   | 'crash'
   | 'laneSwitch'
   | 'highScore'
-  | 'uiClick';
+  | 'uiClick'
+  | 'powerUp'
+  | 'shieldBreak'
+  | 'comboUp'
+  | 'comboBreak';
 
 class AudioManagerSingleton {
   private ctx: AudioContext | null = null;
@@ -84,6 +88,18 @@ class AudioManagerSingleton {
         break;
       case 'uiClick':
         this.playUIClick(ctx, now);
+        break;
+      case 'powerUp':
+        this.playPowerUp(ctx, now);
+        break;
+      case 'shieldBreak':
+        this.playShieldBreak(ctx, now);
+        break;
+      case 'comboUp':
+        this.playComboUp(ctx, now);
+        break;
+      case 'comboBreak':
+        this.playComboBreak(ctx, now);
         break;
     }
   }
@@ -233,6 +249,74 @@ class AudioManagerSingleton {
     osc.connect(gain).connect(this.sfxGain!);
     osc.start(now);
     osc.stop(now + 0.06);
+  }
+
+  /** Power-up activation: ascending epic sweep */
+  private playPowerUp(ctx: AudioContext, now: number): void {
+    const notes = [440, 554, 659, 880]; // A4→C#5→E5→A5
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t = now + i * 0.08;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.2, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+      osc.connect(gain).connect(this.sfxGain!);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    });
+  }
+
+  /** Shield break: descending shatter */
+  private playShieldBreak(ctx: AudioContext, now: number): void {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    osc.connect(gain).connect(this.sfxGain!);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  }
+
+  /** Combo level up: ascending chime */
+  private playComboUp(ctx: AudioContext, now: number): void {
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(600, now);
+    osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(900, now);
+    osc2.frequency.exponentialRampToValueAtTime(1800, now + 0.15);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(this.sfxGain!);
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.2);
+    osc2.stop(now + 0.2);
+  }
+
+  /** Combo break: descending tone */
+  private playComboBreak(ctx: AudioContext, now: number): void {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.exponentialRampToValueAtTime(150, now + 0.2);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    osc.connect(gain).connect(this.sfxGain!);
+    osc.start(now);
+    osc.stop(now + 0.25);
   }
 
   // ── Background Music ───────────────────────────────────────────
