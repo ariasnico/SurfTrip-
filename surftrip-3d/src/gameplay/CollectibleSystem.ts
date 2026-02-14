@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ObjectPool } from '@utils/ObjectPool';
-import { randInt, randFloat } from '@utils/MathUtils';
+import { randInt, randFloat, lerp } from '@utils/MathUtils';
 import { LANES } from './LaneSystem';
 
 export interface Collectible {
@@ -13,6 +13,8 @@ export interface Collectible {
 
 const MIN_INTERVAL = 8;
 const MAX_INTERVAL = 18;
+const MAGNET_RANGE = 6; // attraction radius
+const MAGNET_SPEED = 15; // attraction speed
 
 export class CollectibleSystem {
   private items: Collectible[] = [];
@@ -20,6 +22,8 @@ export class CollectibleSystem {
   private nextSpawnZ = 15;
   private group: THREE.Group;
   private scene: THREE.Scene;
+  /** Track how many items were collected this frame (for combo system) */
+  lastCollectedCount = 0;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -49,20 +53,35 @@ export class CollectibleSystem {
     );
   }
 
-  update(playerZ: number, dt: number): void {
+  update(playerZ: number, dt: number, magnetActive = false, playerX = 0): void {
     // Spawn ahead
     while (this.nextSpawnZ < playerZ + 100) {
       this.spawn(this.nextSpawnZ);
       this.nextSpawnZ += randFloat(MIN_INTERVAL, MAX_INTERVAL);
     }
 
-    // Animate rotation + deactivate behind
+    // Animate rotation + deactivate behind + magnet attraction
     for (const item of this.items) {
       if (!item.active) continue;
       // Spin
       item.mesh.rotation.y += 2.5 * dt;
       // Bob up/down
-      item.mesh.position.y = 1.0 + Math.sin(Date.now() * 0.004 + item.worldZ) * 0.2;
+      const baseY = 1.0 + Math.sin(Date.now() * 0.004 + item.worldZ) * 0.2;
+
+      // Magnet: attract towards player X position
+      if (magnetActive) {
+        const dx = playerX - item.mesh.position.x;
+        const dz = playerZ - item.worldZ;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < MAGNET_RANGE) {
+          item.mesh.position.x = lerp(item.mesh.position.x, playerX, MAGNET_SPEED * dt);
+          item.mesh.position.y = lerp(item.mesh.position.y, 1.0, MAGNET_SPEED * dt);
+        } else {
+          item.mesh.position.y = baseY;
+        }
+      } else {
+        item.mesh.position.y = baseY;
+      }
 
       if (item.worldZ < playerZ - 10) {
         this.deactivate(item);
@@ -92,6 +111,25 @@ export class CollectibleSystem {
     this.nextSpawnZ = z + count * 2.5 + randFloat(MIN_INTERVAL, MAX_INTERVAL);
   }
 
+  /** Spawn collectibles from a pattern section at a given world Z offset */
+  spawnFromPattern(patternCollectibles: { lane: number; offsetZ: number }[], startZ: number): void {
+    for (const c of patternCollectibles) {
+      const mesh = this.pool.get();
+      const x = LANES[c.lane];
+      const z = startZ + c.offsetZ;
+      mesh.position.set(x, 1.0, z);
+      this.group.add(mesh);
+      this.items.push({ mesh, lane: c.lane, worldZ: z, active: true, points: 10 });
+    }
+  }
+
+  /** Temporarily suppress auto-spawning until past a given Z */
+  suppressUntil(z: number): void {
+    if (this.nextSpawnZ < z) {
+      this.nextSpawnZ = z;
+    }
+  }
+
   private deactivate(item: Collectible): void {
     item.active = false;
     item.mesh.visible = false;
@@ -99,19 +137,25 @@ export class CollectibleSystem {
     this.pool.release(item.mesh);
   }
 
-  /** Check collection against player — returns points earned */
-  checkCollection(playerX: number, playerY: number, playerZ: number): number {
+  /** Check collection against player — returns points earned.
+   *  Uses wider radius when megawave is active. */
+  checkCollection(playerX: number, playerY: number, playerZ: number, megawave = false): number {
     let points = 0;
+    let count = 0;
+    const rangeX = megawave ? 3.0 : 1.0;
+    const rangeYZ = megawave ? 3.0 : 1.2;
     for (const item of this.items) {
       if (!item.active) continue;
       const dx = Math.abs(item.mesh.position.x - playerX);
       const dy = Math.abs(item.mesh.position.y - (playerY + 1.0));
       const dz = Math.abs(item.worldZ - playerZ);
-      if (dx < 1.0 && dy < 1.2 && dz < 1.2) {
+      if (dx < rangeX && dy < rangeYZ && dz < rangeYZ) {
         points += item.points;
+        count++;
         this.deactivate(item);
       }
     }
+    this.lastCollectedCount = count;
     return points;
   }
 
@@ -123,6 +167,7 @@ export class CollectibleSystem {
     }
     this.items = [];
     this.nextSpawnZ = 15;
+    this.lastCollectedCount = 0;
   }
 
   dispose(): void {

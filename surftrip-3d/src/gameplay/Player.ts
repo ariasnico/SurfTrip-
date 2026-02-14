@@ -7,6 +7,7 @@ import type { SwipeDirection } from '@core/InputManager';
 
 const GRAVITY = 25;
 const JUMP_FORCE = 11;
+const RAMP_JUMP_FORCE = 16; // higher jump from ramps
 const LANE_SWITCH_SPEED = 12; // units per second for lane lerp
 const SLIDE_DURATION = 0.8; // seconds
 
@@ -23,6 +24,9 @@ export class Player {
   // Slide
   private slideTimer = 0;
   private originalScaleY = 1;
+
+  // Shield visual aura
+  private shieldMesh: THREE.Mesh | null = null;
 
   // World Z position (moves forward)
   posZ = 0;
@@ -132,6 +136,36 @@ export class Player {
     this.state = 'dead';
   }
 
+  /** Trigger a higher jump (e.g. from a ramp) */
+  rampJump(): void {
+    if (this.state === 'dead') return;
+    if (this.state === 'sliding') this.endSlide();
+    this.velocityY = RAMP_JUMP_FORCE;
+    this.grounded = false;
+    this.state = 'jumping';
+  }
+
+  /** Show/hide shield bubble around the player */
+  setShieldVisible(visible: boolean): void {
+    if (visible && !this.shieldMesh) {
+      const geo = new THREE.SphereGeometry(0.9, 16, 12);
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x44aaff,
+        emissive: 0x2288ff,
+        emissiveIntensity: 0.4,
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+      });
+      this.shieldMesh = new THREE.Mesh(geo, mat);
+      this.shieldMesh.position.y = 0.8;
+      this.mesh.add(this.shieldMesh);
+    }
+    if (this.shieldMesh) {
+      this.shieldMesh.visible = visible;
+    }
+  }
+
   reset(): void {
     this.laneIndex = LANE_CENTER;
     this.targetX = getLaneX(LANE_CENTER);
@@ -142,6 +176,7 @@ export class Player {
     this.state = 'running';
     this.posZ = 0;
     this.slideTimer = 0;
+    this.setShieldVisible(false);
     this.animator.reset();
   }
 

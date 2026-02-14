@@ -51,6 +51,107 @@
         -webkit-backdrop-filter: blur(4px);
       }
 
+      /* Combo display */
+      #combo-display {
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        z-index: 6;
+        font-size: clamp(1.4rem, 5vw, 2.2rem);
+        font-weight: 900;
+        color: #ffd700;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5), 0 0 10px rgba(255,215,0,0.5);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s, transform 0.15s;
+        text-align: right;
+      }
+      #combo-display.active {
+        opacity: 1;
+      }
+      #combo-display.pulse {
+        animation: comboPulse 0.3s ease-out;
+      }
+      @keyframes comboPulse {
+        0% { transform: translateY(-50%) scale(1.4); }
+        100% { transform: translateY(-50%) scale(1); }
+      }
+      #combo-display .multiplier {
+        font-size: clamp(0.9rem, 3vw, 1.3rem);
+        color: #ff9900;
+        display: block;
+      }
+
+      /* Power-up indicators */
+      #powerup-bar {
+        position: fixed;
+        top: max(56px, calc(env(safe-area-inset-top) + 44px));
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 6;
+        display: flex;
+        gap: 8px;
+        pointer-events: none;
+      }
+      .powerup-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 10px;
+        border-radius: 8px;
+        color: #fff;
+        font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+        font-weight: 700;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        animation: powerupFadeIn 0.3s ease-out;
+      }
+      @keyframes powerupFadeIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .powerup-indicator .icon {
+        font-size: 1.1em;
+      }
+      .powerup-indicator .timer-bar {
+        width: 40px;
+        height: 4px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+      .powerup-indicator .timer-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.1s linear;
+      }
+
+      /* Section announce */
+      #section-announce {
+        position: fixed;
+        top: 35%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 7;
+        font-size: clamp(1.2rem, 4vw, 1.8rem);
+        font-weight: 800;
+        color: #fff;
+        text-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      #section-announce.active {
+        opacity: 1;
+        animation: sectionSlideIn 0.5s ease-out;
+      }
+      @keyframes sectionSlideIn {
+        0% { transform: translate(-50%, -30%); opacity: 0; }
+        100% { transform: translate(-50%, -50%); opacity: 1; }
+      }
+
       /* Start screen */
       #start-screen {
         position: fixed;
@@ -192,6 +293,18 @@
       <span class="score-display" id="score-label">0 pts</span>
       <span class="score-display" id="hi-label">HI: 0</span>
     </div>
+
+    <!-- Combo Display -->
+    <div id="combo-display">
+      <span id="combo-count"></span>
+      <span class="multiplier" id="combo-multiplier"></span>
+    </div>
+
+    <!-- Power-up Indicators Bar -->
+    <div id="powerup-bar"></div>
+
+    <!-- Section Announce -->
+    <div id="section-announce"></div>
 
     <!-- Game Over -->
     <div id="game-over">

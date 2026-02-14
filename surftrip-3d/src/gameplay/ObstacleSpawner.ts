@@ -66,6 +66,29 @@ export class ObstacleSpawner {
     this.obstacles.push({ mesh, lane: laneIdx, worldZ: z, type, active: true });
   }
 
+  /** Spawn obstacles from a pattern section at a given world Z offset */
+  spawnFromPattern(patternObstacles: { lane: number; offsetZ: number; type: 'low' | 'high' }[], startZ: number): void {
+    for (const po of patternObstacles) {
+      const mesh = po.type === 'low' ? createLowObstacle() : createHighObstacle();
+      const x = LANES[po.lane];
+      const z = startZ + po.offsetZ;
+      if (po.type === 'low') {
+        mesh.position.set(x, 0.45, z);
+      } else {
+        mesh.position.set(x, 1.4, z);
+      }
+      this.group.add(mesh);
+      this.obstacles.push({ mesh, lane: po.lane, worldZ: z, type: po.type, active: true });
+    }
+  }
+
+  /** Temporarily suppress auto-spawning until past a given Z */
+  suppressUntil(z: number): void {
+    if (this.nextSpawnZ < z) {
+      this.nextSpawnZ = z;
+    }
+  }
+
   /** Get all active obstacles near the player for collision checking */
   getActiveNear(playerZ: number, range = 2): Obstacle[] {
     return this.obstacles.filter(
