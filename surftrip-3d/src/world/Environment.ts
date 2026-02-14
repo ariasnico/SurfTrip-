@@ -51,8 +51,13 @@ export class Environment {
     this.sky.setColors(colors.skyZenith, colors.skyHorizon, colors.skyGround);
     this.ocean.setColors(colors.oceanDeep, colors.oceanSurf, colors.oceanFoam);
 
-    // Update scene fog and background
-    this.scene.fog = new THREE.Fog(colors.fog, 40, 120);
+    // Update existing fog color (avoid creating new Fog every frame)
+    const fog = this.scene.fog as THREE.Fog;
+    if (fog) {
+      fog.color.setHex(colors.fog);
+    } else {
+      this.scene.fog = new THREE.Fog(colors.fog, 40, 120);
+    }
     if (this.scene.background instanceof THREE.Color) {
       this.scene.background.setHex(colors.background);
     }

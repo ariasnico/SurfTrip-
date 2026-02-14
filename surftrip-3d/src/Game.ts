@@ -434,12 +434,15 @@ export class Game {
   }
 
   private updateZones(dt: number): void {
+    const wasTransitioning = this.zones.isTransitioning;
     this.zones.update(this.player.posZ, dt);
 
-    // Apply blended zone colors every frame during transitions (or once when stable)
-    const colors = this.zones.getBlendedColors();
-    this.environment.applyZoneColors(colors);
-    this.track.setColors(colors.trackSand, colors.trackBase, colors.trackDivider, colors.trackEdge);
+    // Only apply blended colors during active transitions (not every frame when stable)
+    if (this.zones.isTransitioning || this.zones.zoneChangedThisFrame || (wasTransitioning && !this.zones.isTransitioning)) {
+      const colors = this.zones.getBlendedColors();
+      this.environment.applyZoneColors(colors);
+      this.track.setColors(colors.trackSand, colors.trackBase, colors.trackDivider, colors.trackEdge);
+    }
 
     // When a new zone transition starts, show zone name and update spawners
     if (this.zones.zoneChangedThisFrame) {
