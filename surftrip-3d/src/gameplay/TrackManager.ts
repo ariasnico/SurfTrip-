@@ -80,6 +80,15 @@ export class TrackManager {
     this.chunks.push(chunkGroup);
   }
 
+  reset(): void {
+    // Reposition all chunks back to the starting layout
+    for (let i = 0; i < this.chunks.length; i++) {
+      this.chunks[i].position.z = i * CHUNK_LENGTH + CHUNK_LENGTH / 2;
+    }
+    this.furthestZ = CHUNK_COUNT * CHUNK_LENGTH;
+    this.baseGround.position.z = 80;
+  }
+
   update(playerZ: number): void {
     // Move the base ground to follow the player
     this.baseGround.position.z = playerZ + 80;
