@@ -3,14 +3,16 @@ import { Ocean } from './Ocean';
 import { Sky } from './Sky';
 import { BeachDecor } from './BeachDecor';
 import { createPalmTree } from './PalmTree';
+import type { ZoneColors, ZoneId } from '@data/ZoneData';
 
 export class Environment {
   private ocean: Ocean;
   private sky: Sky;
-  private beachDecor: BeachDecor;
+  beachDecor: BeachDecor;
   private palmTrees: THREE.Group;
   private scene: THREE.Scene;
   private palmSpan = 200;
+  private lastAppliedZone: ZoneId = 'chapadmalal';
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -21,7 +23,7 @@ export class Environment {
     // Gradient sky + clouds + seagulls
     this.sky = new Sky(this.scene);
 
-    // Beach decorations (umbrellas, sandcastles, chairs, rocks)
+    // Decorations (zone-aware)
     this.beachDecor = new BeachDecor(this.scene);
 
     // Palm trees on both sides
@@ -44,12 +46,35 @@ export class Environment {
     }
   }
 
+  /** Apply blended zone colors to all visual sub-systems */
+  applyZoneColors(colors: ZoneColors): void {
+    this.sky.setColors(colors.skyZenith, colors.skyHorizon, colors.skyGround);
+    this.ocean.setColors(colors.oceanDeep, colors.oceanSurf, colors.oceanFoam);
+
+    // Update scene fog and background
+    this.scene.fog = new THREE.Fog(colors.fog, 40, 120);
+    if (this.scene.background instanceof THREE.Color) {
+      this.scene.background.setHex(colors.background);
+    }
+  }
+
+  /** Switch decorations when entering a new zone */
+  switchDecorZone(zone: ZoneId): void {
+    if (zone === this.lastAppliedZone) return;
+    this.lastAppliedZone = zone;
+    this.beachDecor.currentZone = zone;
+    this.beachDecor.repopulate();
+  }
+
   reset(): void {
     // Remove old palms and recreate at starting positions
     while (this.palmTrees.children.length > 0) {
       this.palmTrees.remove(this.palmTrees.children[0]);
     }
     this.createPalms();
+    this.lastAppliedZone = 'chapadmalal';
+    this.beachDecor.currentZone = 'chapadmalal';
+    this.beachDecor.repopulate();
   }
 
   update(playerZ: number, dt: number): void {

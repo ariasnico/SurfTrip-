@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>SurfTrip 3D — Chapadmalal</title>
+    <title>SurfTrip 3D — Costa Argentina</title>
     <style>
       * {
         margin: 0;
@@ -249,6 +249,40 @@
         min-width: 220px;
       }
 
+      /* Zone indicator */
+      #zone-announce {
+        position: fixed;
+        top: 20%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 8;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.6s;
+        text-align: center;
+      }
+      #zone-announce.active {
+        opacity: 1;
+        animation: zoneSlideIn 0.8s ease-out;
+      }
+      @keyframes zoneSlideIn {
+        0% { transform: translate(-50%, -20%); opacity: 0; }
+        100% { transform: translate(-50%, -50%); opacity: 1; }
+      }
+      #zone-announce .zone-label {
+        font-size: clamp(0.7rem, 2.5vw, 0.9rem);
+        font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+      #zone-announce .zone-name {
+        font-size: clamp(1.5rem, 5vw, 2.5rem);
+        font-weight: 900;
+        color: #fff;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.6), 0 0 20px rgba(255,255,255,0.3);
+      }
+
       /* Sound toggle */
       #btn-sound {
         position: fixed;
@@ -272,14 +306,14 @@
       }
       #btn-sound:active { transform: scale(0.9); }
     </style>
-    <script type="module" crossorigin src="./assets/index-BWnUxwZL.js"></script>
+    <script type="module" crossorigin src="./assets/index-BIhveG4i.js"></script>
   </head>
   <body>
     <!-- Start Screen -->
     <div id="start-screen">
       <div class="emoji-hero">🏄‍♂️</div>
       <h1>Surf Runner 3D</h1>
-      <p class="subtitle">Surfeando las olas de Chapadmalal</p>
+      <p class="subtitle">Surfeando la costa argentina</p>
       <div class="controls-hint">
         Desliza para cambiar de carril<br>
         Swipe arriba para saltar<br>
@@ -306,6 +340,12 @@
 
     <!-- Section Announce -->
     <div id="section-announce"></div>
+
+    <!-- Zone Announce -->
+    <div id="zone-announce">
+      <div class="zone-label">Entrando a</div>
+      <div class="zone-name" id="zone-name"></div>
+    </div>
 
     <!-- Game Over -->
     <div id="game-over">

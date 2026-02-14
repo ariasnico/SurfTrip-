@@ -1,30 +1,43 @@
 import * as THREE from 'three';
+import type { ZoneId } from '@data/ZoneData';
 
-/** Creates varied low obstacle meshes (things to jump over) */
-export function createLowObstacle(): THREE.Mesh {
-  const variant = Math.floor(Math.random() * 4);
-
-  switch (variant) {
-    case 0: // Rock cluster
-      return createRockObstacle();
-    case 1: // Driftwood log
-      return createDriftwood();
-    case 2: // Mate gigante
-      return createMateObstacle();
-    default: // Sandcastle wall
-      return createSandWall();
+/** Creates varied low obstacle meshes (things to jump over), zone-aware */
+export function createLowObstacle(zone: ZoneId = 'chapadmalal'): THREE.Mesh {
+  switch (zone) {
+    case 'rambla':
+      return createRamblaLow();
+    case 'carilo':
+      return createCariloLow();
+    case 'rutaCostera':
+      return createRutaLow();
+    default: { // chapadmalal
+      const variant = Math.floor(Math.random() * 4);
+      switch (variant) {
+        case 0: return createRockObstacle();
+        case 1: return createDriftwood();
+        case 2: return createMateObstacle();
+        default: return createSandWall();
+      }
+    }
   }
 }
 
-/** Creates varied high obstacle meshes (things to slide under) */
-export function createHighObstacle(): THREE.Mesh {
-  const variant = Math.floor(Math.random() * 2);
-
-  switch (variant) {
-    case 0: // Beach umbrella horizontal
-      return createUmbrellaBarrier();
-    default: // Wooden barrier
-      return createWoodBarrier();
+/** Creates varied high obstacle meshes (things to slide under), zone-aware */
+export function createHighObstacle(zone: ZoneId = 'chapadmalal'): THREE.Mesh {
+  switch (zone) {
+    case 'rambla':
+      return createRamblaHigh();
+    case 'carilo':
+      return createCariloHigh();
+    case 'rutaCostera':
+      return createRutaHigh();
+    default: { // chapadmalal
+      const variant = Math.floor(Math.random() * 2);
+      switch (variant) {
+        case 0: return createUmbrellaBarrier();
+        default: return createWoodBarrier();
+      }
+    }
   }
 }
 
@@ -194,5 +207,393 @@ function createWoodBarrier(): THREE.Mesh {
   hitbox.userData['boxW'] = 2.2;
   hitbox.userData['boxH'] = 1.2;
   hitbox.userData['boxD'] = 0.2;
+  return hitbox as THREE.Mesh;
+}
+
+// ── Zone 2: Rambla de Mar del Plata ─────────────────────────────────────
+
+/** Rambla low: park bench */
+function createRamblaLow(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 3);
+  switch (variant) {
+    case 0: return createBenchObstacle();
+    case 1: return createBicycleObstacle();
+    default: return createChurroCartObstacle();
+  }
+}
+
+/** Rambla high: banner / awning */
+function createRamblaHigh(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 2);
+  return variant === 0 ? createBannerBarrier() : createWoodBarrier();
+}
+
+function createBenchObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b6914, roughness: 0.8 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.5, roughness: 0.4 });
+
+  // Seat
+  const seatGeo = new THREE.BoxGeometry(1.6, 0.08, 0.5);
+  const seat = new THREE.Mesh(seatGeo, woodMat);
+  seat.position.y = 0.45;
+  seat.castShadow = true;
+  group.add(seat);
+
+  // Back
+  const backGeo = new THREE.BoxGeometry(1.6, 0.5, 0.06);
+  const back = new THREE.Mesh(backGeo, woodMat);
+  back.position.set(0, 0.72, -0.2);
+  back.rotation.x = -0.1;
+  back.castShadow = true;
+  group.add(back);
+
+  // Legs
+  const legGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.45, 5);
+  for (const lx of [-0.6, 0.6]) {
+    for (const lz of [-0.15, 0.15]) {
+      const leg = new THREE.Mesh(legGeo, metalMat);
+      leg.position.set(lx, 0.22, lz);
+      group.add(leg);
+    }
+  }
+
+  const hitbox = makeHitbox(group, 1.6, 1.0, 0.6);
+  return hitbox;
+}
+
+function createBicycleObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xdd3333, metalness: 0.3, roughness: 0.5 });
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.7 });
+
+  // Frame (simplified triangle)
+  const frameGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.0, 5);
+  const frame = new THREE.Mesh(frameGeo, frameMat);
+  frame.rotation.z = Math.PI / 6;
+  frame.position.set(0, 0.5, 0);
+  frame.castShadow = true;
+  group.add(frame);
+
+  // Wheels
+  const wheelGeo = new THREE.TorusGeometry(0.3, 0.04, 8, 16);
+  for (const wx of [-0.4, 0.4]) {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.position.set(wx, 0.3, 0);
+    wheel.rotation.y = Math.PI / 2;
+    group.add(wheel);
+  }
+
+  // Handlebars
+  const barGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 5);
+  barGeo.rotateZ(Math.PI / 2);
+  const bar = new THREE.Mesh(barGeo, frameMat);
+  bar.position.set(0.3, 0.8, 0);
+  group.add(bar);
+
+  const hitbox = makeHitbox(group, 1.2, 1.0, 0.6);
+  return hitbox;
+}
+
+function createChurroCartObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const cartMat = new THREE.MeshStandardMaterial({ color: 0xcc8833, roughness: 0.7 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.4, roughness: 0.5 });
+
+  // Cart body
+  const bodyGeo = new THREE.BoxGeometry(1.2, 0.6, 0.8);
+  const body = new THREE.Mesh(bodyGeo, cartMat);
+  body.position.y = 0.5;
+  body.castShadow = true;
+  group.add(body);
+
+  // Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8);
+  wheelGeo.rotateX(Math.PI / 2);
+  for (const wx of [-0.5, 0.5]) {
+    const wheel = new THREE.Mesh(wheelGeo, metalMat);
+    wheel.position.set(wx, 0.15, 0.35);
+    group.add(wheel);
+  }
+
+  // Canopy
+  const canopyGeo = new THREE.BoxGeometry(1.4, 0.05, 1.0);
+  const canopyMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.7 });
+  const canopy = new THREE.Mesh(canopyGeo, canopyMat);
+  canopy.position.set(0, 1.1, 0);
+  canopy.castShadow = true;
+  group.add(canopy);
+
+  const hitbox = makeHitbox(group, 1.4, 1.0, 1.0);
+  return hitbox;
+}
+
+function createBannerBarrier(): THREE.Mesh {
+  const group = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.5, roughness: 0.4 });
+  const bannerColors = [0xff6600, 0x3388ff, 0xcc3333];
+  const bannerMat = new THREE.MeshStandardMaterial({
+    color: bannerColors[Math.floor(Math.random() * bannerColors.length)],
+    roughness: 0.7,
+    side: THREE.DoubleSide,
+  });
+
+  // Two poles
+  const poleGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+  for (const px of [-1.0, 1.0]) {
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.set(px, -0.4, 0);
+    pole.castShadow = true;
+    group.add(pole);
+  }
+
+  // Banner
+  const bannerGeo = new THREE.PlaneGeometry(2.0, 0.6);
+  const banner = new THREE.Mesh(bannerGeo, bannerMat);
+  banner.position.y = 0;
+  banner.castShadow = true;
+  group.add(banner);
+
+  const geo = new THREE.BoxGeometry(2.2, 1.2, 0.3);
+  const mat = new THREE.MeshStandardMaterial({ visible: false });
+  const hitbox = new THREE.Mesh(geo, mat);
+  hitbox.add(group);
+  hitbox.castShadow = true;
+  hitbox.userData['boxW'] = 2.2;
+  hitbox.userData['boxH'] = 1.2;
+  hitbox.userData['boxD'] = 0.3;
+  return hitbox as THREE.Mesh;
+}
+
+// ── Zone 3: Bosque de Carilo ────────────────────────────────────────────
+
+function createCariloLow(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 3);
+  switch (variant) {
+    case 0: return createTreeTrunkObstacle();
+    case 1: return createRootObstacle();
+    default: return createMushroomObstacle();
+  }
+}
+
+function createCariloHigh(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 2);
+  return variant === 0 ? createLowBranchBarrier() : createWoodBarrier();
+}
+
+function createTreeTrunkObstacle(): THREE.Mesh {
+  const geo = new THREE.CylinderGeometry(0.25, 0.3, 2.0, 7);
+  geo.rotateZ(Math.PI / 2);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData['boxW'] = 2.0;
+  mesh.userData['boxH'] = 0.5;
+  mesh.userData['boxD'] = 0.5;
+  return mesh;
+}
+
+function createRootObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const rootMat = new THREE.MeshStandardMaterial({ color: 0x4a2a0a, roughness: 0.9 });
+
+  for (let i = 0; i < 4; i++) {
+    const rootGeo = new THREE.CylinderGeometry(0.06, 0.1, 1.2, 5);
+    rootGeo.rotateZ(Math.PI / 2 + (Math.random() - 0.5) * 0.4);
+    const root = new THREE.Mesh(rootGeo, rootMat);
+    root.position.set(
+      (Math.random() - 0.5) * 0.8,
+      0.08,
+      (Math.random() - 0.5) * 0.3,
+    );
+    root.castShadow = true;
+    group.add(root);
+  }
+
+  const hitbox = makeHitbox(group, 1.6, 0.5, 0.6);
+  return hitbox;
+}
+
+function createMushroomObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0xddd8c0, roughness: 0.8 });
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xcc3322, roughness: 0.6 });
+
+  // Stem
+  const stemGeo = new THREE.CylinderGeometry(0.15, 0.2, 0.5, 6);
+  const stem = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = 0.25;
+  stem.castShadow = true;
+  group.add(stem);
+
+  // Cap
+  const capGeo = new THREE.SphereGeometry(0.45, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  const cap = new THREE.Mesh(capGeo, capMat);
+  cap.position.y = 0.5;
+  cap.castShadow = true;
+  group.add(cap);
+
+  // White spots
+  const spotMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+  for (let i = 0; i < 5; i++) {
+    const spotGeo = new THREE.SphereGeometry(0.05, 5, 4);
+    const spot = new THREE.Mesh(spotGeo, spotMat);
+    const angle = (i / 5) * Math.PI * 2;
+    spot.position.set(
+      Math.cos(angle) * 0.3,
+      0.6 + Math.random() * 0.1,
+      Math.sin(angle) * 0.3,
+    );
+    group.add(spot);
+  }
+
+  const hitbox = makeHitbox(group, 1.0, 0.9, 1.0);
+  return hitbox;
+}
+
+function createLowBranchBarrier(): THREE.Mesh {
+  const group = new THREE.Group();
+  const branchMat = new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.85 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x2d6b20, roughness: 0.7 });
+
+  // Main branch
+  const branchGeo = new THREE.CylinderGeometry(0.06, 0.1, 2.4, 5);
+  branchGeo.rotateZ(Math.PI / 2);
+  const branch = new THREE.Mesh(branchGeo, branchMat);
+  branch.castShadow = true;
+  group.add(branch);
+
+  // Leaves
+  for (let i = 0; i < 6; i++) {
+    const leafGeo = new THREE.SphereGeometry(0.25, 6, 5);
+    const leaf = new THREE.Mesh(leafGeo, leafMat);
+    leaf.position.set(
+      (Math.random() - 0.5) * 1.8,
+      (Math.random() - 0.5) * 0.3,
+      (Math.random() - 0.5) * 0.3,
+    );
+    leaf.scale.y = 0.5;
+    group.add(leaf);
+  }
+
+  const geo = new THREE.BoxGeometry(2.2, 1.2, 0.5);
+  const mat = new THREE.MeshStandardMaterial({ visible: false });
+  const hitbox = new THREE.Mesh(geo, mat);
+  hitbox.add(group);
+  hitbox.castShadow = true;
+  hitbox.userData['boxW'] = 2.2;
+  hitbox.userData['boxH'] = 1.2;
+  hitbox.userData['boxD'] = 0.5;
+  return hitbox as THREE.Mesh;
+}
+
+// ── Zone 4: Ruta Costera ────────────────────────────────────────────────
+
+function createRutaLow(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 3);
+  switch (variant) {
+    case 0: return createTrafficConeObstacle();
+    case 1: return createTireObstacle();
+    default: return createRockObstacle(); // rocks appear everywhere
+  }
+}
+
+function createRutaHigh(): THREE.Mesh {
+  const variant = Math.floor(Math.random() * 2);
+  return variant === 0 ? createRoadSignBarrier() : createWoodBarrier();
+}
+
+function createTrafficConeObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+  const coneMat = new THREE.MeshStandardMaterial({ color: 0xff6600, roughness: 0.6 });
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
+
+  // Cone
+  const coneGeo = new THREE.ConeGeometry(0.25, 0.8, 6);
+  const cone = new THREE.Mesh(coneGeo, coneMat);
+  cone.position.y = 0.4;
+  cone.castShadow = true;
+  group.add(cone);
+
+  // White stripe
+  const stripeGeo = new THREE.CylinderGeometry(0.18, 0.2, 0.1, 6);
+  const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+  stripe.position.y = 0.35;
+  group.add(stripe);
+
+  // Base
+  const baseGeo = new THREE.BoxGeometry(0.5, 0.06, 0.5);
+  const base = new THREE.Mesh(baseGeo, coneMat);
+  base.position.y = 0.03;
+  group.add(base);
+
+  const hitbox = makeHitbox(group, 0.8, 0.9, 0.8);
+  return hitbox;
+}
+
+function createTireObstacle(): THREE.Mesh {
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 });
+  const geo = new THREE.TorusGeometry(0.35, 0.15, 8, 16);
+  geo.rotateX(Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, tireMat);
+  mesh.position.y = 0.15;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData['boxW'] = 1.0;
+  mesh.userData['boxH'] = 0.5;
+  mesh.userData['boxD'] = 1.0;
+  return mesh;
+}
+
+function createRoadSignBarrier(): THREE.Mesh {
+  const group = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.5, roughness: 0.4 });
+  const signMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5 });
+
+  // Pole
+  const poleGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 6);
+  const pole = new THREE.Mesh(poleGeo, poleMat);
+  pole.position.set(0, -0.4, 0);
+  pole.castShadow = true;
+  group.add(pole);
+
+  // Sign (diamond shape via rotated box)
+  const signGeo = new THREE.BoxGeometry(0.8, 0.8, 0.05);
+  const sign = new THREE.Mesh(signGeo, signMat);
+  sign.rotation.z = Math.PI / 4;
+  sign.position.y = 0.2;
+  sign.castShadow = true;
+  group.add(sign);
+
+  // Horizontal bar for collision width
+  const barGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.0, 5);
+  barGeo.rotateZ(Math.PI / 2);
+  const bar = new THREE.Mesh(barGeo, poleMat);
+  bar.position.y = -0.2;
+  group.add(bar);
+
+  const geo = new THREE.BoxGeometry(2.0, 1.2, 0.3);
+  const mat = new THREE.MeshStandardMaterial({ visible: false });
+  const hitbox = new THREE.Mesh(geo, mat);
+  hitbox.add(group);
+  hitbox.castShadow = true;
+  hitbox.userData['boxW'] = 2.0;
+  hitbox.userData['boxH'] = 1.2;
+  hitbox.userData['boxD'] = 0.3;
+  return hitbox as THREE.Mesh;
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────
+
+function makeHitbox(group: THREE.Group, w: number, h: number, d: number): THREE.Mesh {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mat = new THREE.MeshStandardMaterial({ visible: false });
+  const hitbox = new THREE.Mesh(geo, mat);
+  hitbox.add(group);
+  hitbox.castShadow = true;
+  hitbox.userData['boxW'] = w;
+  hitbox.userData['boxH'] = h;
+  hitbox.userData['boxD'] = d;
   return hitbox as THREE.Mesh;
 }

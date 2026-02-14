@@ -19,19 +19,17 @@ const VERT = /* glsl */ `
 
 const FRAG = /* glsl */ `
   uniform float uTime;
+  uniform vec3 uDeep;
+  uniform vec3 uSurf;
+  uniform vec3 uFoam;
   varying vec2 vUv;
   varying float vWave;
   void main() {
-    // Deep ocean to lighter surf color
-    vec3 deep = vec3(0.08, 0.30, 0.55);
-    vec3 surf = vec3(0.25, 0.65, 0.85);
-    vec3 foam = vec3(0.9, 0.95, 1.0);
-
-    vec3 color = mix(deep, surf, vWave);
+    vec3 color = mix(uDeep, uSurf, vWave);
 
     // Foam on wave crests
     float foamLine = smoothstep(0.72, 0.82, vWave);
-    color = mix(color, foam, foamLine * 0.7);
+    color = mix(color, uFoam, foamLine * 0.7);
 
     // Shimmer
     float shimmer = sin(vUv.x * 40.0 + uTime * 2.0) * sin(vUv.y * 40.0 + uTime * 1.5);
@@ -43,13 +41,23 @@ const FRAG = /* glsl */ `
 
 export class Ocean {
   private mesh: THREE.Mesh;
-  private uniforms: { uTime: { value: number } };
+  private uniforms: {
+    uTime: { value: number };
+    uDeep: { value: THREE.Vector3 };
+    uSurf: { value: THREE.Vector3 };
+    uFoam: { value: THREE.Vector3 };
+  };
   private scene: THREE.Scene;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
 
-    this.uniforms = { uTime: { value: 0 } };
+    this.uniforms = {
+      uTime: { value: 0 },
+      uDeep: { value: new THREE.Vector3(0.08, 0.30, 0.55) },
+      uSurf: { value: new THREE.Vector3(0.25, 0.65, 0.85) },
+      uFoam: { value: new THREE.Vector3(0.9, 0.95, 1.0) },
+    };
 
     const geo = new THREE.PlaneGeometry(100, 300, 64, 64);
     geo.rotateX(-Math.PI / 2);
@@ -65,6 +73,17 @@ export class Ocean {
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.position.set(55, -0.3, 80);
     this.scene.add(this.mesh);
+  }
+
+  /** Update ocean colors for zone transitions */
+  setColors(
+    deep: [number, number, number],
+    surf: [number, number, number],
+    foam: [number, number, number],
+  ): void {
+    this.uniforms.uDeep.value.set(deep[0], deep[1], deep[2]);
+    this.uniforms.uSurf.value.set(surf[0], surf[1], surf[2]);
+    this.uniforms.uFoam.value.set(foam[0], foam[1], foam[2]);
   }
 
   update(dt: number, playerZ: number): void {

@@ -320,20 +320,34 @@ class AudioManagerSingleton {
   }
 
   // ── Background Music ───────────────────────────────────────────
-  // Procedural surf-rock-ish loop using simple oscillators and arpeggios
+  // Procedural loop using oscillators and arpeggios — zone-configurable
+
+  private currentChords: number[][] = [
+    [220, 261.63, 329.63],
+    [174.61, 220, 261.63],
+    [261.63, 329.63, 392],
+    [196, 246.94, 293.66],
+  ];
+  private currentTempo = 214;
+  private currentBassType: OscillatorType = 'triangle';
+
+  /** Update the music to use a new zone's chord progression and tempo */
+  setMusicConfig(chords: number[][], tempo: number, bassType: OscillatorType): void {
+    this.currentChords = chords;
+    this.currentTempo = tempo;
+    this.currentBassType = bassType;
+
+    // If music is playing, restart with new config
+    if (this.musicPlaying) {
+      this.stopMusic();
+      this.startMusic();
+    }
+  }
 
   startMusic(): void {
     if (this._muted || this.musicPlaying) return;
     const ctx = this.ensureCtx();
     this.musicPlaying = true;
-
-    // Chord progression: Am - F - C - G (surf rock vibes)
-    const chords = [
-      [220, 261.63, 329.63], // Am
-      [174.61, 220, 261.63], // F
-      [261.63, 329.63, 392], // C
-      [196, 246.94, 293.66], // G
-    ];
 
     let chordIndex = 0;
     let beatIndex = 0;
@@ -341,12 +355,12 @@ class AudioManagerSingleton {
     const playBeat = (): void => {
       if (!this.musicPlaying || this._muted) return;
       const now = ctx.currentTime;
-      const chord = chords[chordIndex];
+      const chord = this.currentChords[chordIndex % this.currentChords.length];
 
       // Bass note
       const bass = ctx.createOscillator();
       const bassGain = ctx.createGain();
-      bass.type = 'triangle';
+      bass.type = this.currentBassType;
       bass.frequency.value = chord[0] / 2;
       bassGain.gain.setValueAtTime(0.15, now);
       bassGain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
@@ -370,13 +384,12 @@ class AudioManagerSingleton {
 
       beatIndex++;
       if (beatIndex % 4 === 0) {
-        chordIndex = (chordIndex + 1) % chords.length;
+        chordIndex = (chordIndex + 1) % this.currentChords.length;
       }
 
       // Cleanup old oscillators
       this.musicOscs = this.musicOscs.filter((o) => {
         try {
-          // If ended, remove reference
           return o.context.currentTime < ctx.currentTime + 1;
         } catch {
           return false;
@@ -384,9 +397,8 @@ class AudioManagerSingleton {
       });
     };
 
-    // Play at ~140 BPM (8th notes at ~214ms)
     playBeat();
-    this.musicInterval = setInterval(playBeat, 214);
+    this.musicInterval = setInterval(playBeat, this.currentTempo);
   }
 
   stopMusic(): void {

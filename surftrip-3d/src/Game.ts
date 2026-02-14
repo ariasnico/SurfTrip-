@@ -10,6 +10,7 @@ import { DifficultyManager } from '@gameplay/DifficultyManager';
 import { PowerUpManager } from '@gameplay/PowerUpManager';
 import { ComboSystem } from '@gameplay/ComboSystem';
 import { LevelPatternManager } from '@gameplay/LevelPatternManager';
+import { ZoneManager } from '@gameplay/ZoneManager';
 import { Environment } from '@world/Environment';
 import { ParticleSystem } from '@vfx/ParticleSystem';
 import { SandTrail } from '@vfx/SandTrail';
@@ -38,6 +39,8 @@ const comboCountEl = document.getElementById('combo-count')!;
 const comboMultiplierEl = document.getElementById('combo-multiplier')!;
 const powerupBar = document.getElementById('powerup-bar')!;
 const sectionAnnounce = document.getElementById('section-announce')!;
+const zoneAnnounce = document.getElementById('zone-announce')!;
+const zoneNameEl = document.getElementById('zone-name')!;
 
 // Colors for VFX
 const GOLD = new THREE.Color(0xffd700);
@@ -93,6 +96,9 @@ export class Game {
   private combo: ComboSystem;
   private patterns: LevelPatternManager;
 
+  // Phase 7: Zones
+  private zones: ZoneManager;
+
   // VFX
   private collectParticles: ParticleSystem;
   private crashParticles: ParticleSystem;
@@ -113,6 +119,9 @@ export class Game {
   // Section announce timer
   private sectionAnnounceTimer = 0;
 
+  // Zone announce timer
+  private zoneAnnounceTimer = 0;
+
   constructor() {
     this.sceneManager = new SceneManager();
     this.input = new InputManager();
@@ -128,6 +137,9 @@ export class Game {
     this.powerUps = new PowerUpManager(this.sceneManager.scene);
     this.combo = new ComboSystem();
     this.patterns = new LevelPatternManager();
+
+    // Phase 7: Zones
+    this.zones = new ZoneManager();
 
     // VFX
     this.collectParticles = new ParticleSystem(this.sceneManager.scene);
@@ -190,6 +202,13 @@ export class Game {
     this.powerUps.reset();
     this.combo.reset();
     this.patterns.reset();
+    this.zones.reset();
+    this.obstacles.currentZone = 'chapadmalal';
+
+    // Apply initial zone colors
+    const initialColors = this.zones.getBlendedColors();
+    this.environment.applyZoneColors(initialColors);
+    this.track.setColors(initialColors.trackSand, initialColors.trackBase, initialColors.trackDivider, initialColors.trackEdge);
 
     // UI
     startScreen.classList.add('hidden');
@@ -198,11 +217,13 @@ export class Game {
     comboDisplay.classList.remove('active');
     powerupBar.innerHTML = '';
     sectionAnnounce.classList.remove('active');
+    zoneAnnounce.classList.remove('active');
 
     this.state = 'playing';
     this.cameraTargetZ = 0;
     this.prevPlayerState = 'running';
     this.sectionAnnounceTimer = 0;
+    this.zoneAnnounceTimer = 0;
 
     // Start music
     audioManager.startMusic();
@@ -245,6 +266,9 @@ export class Game {
     );
     this.environment.update(this.player.posZ, dt);
     this.powerUps.update(this.player.posZ, dt);
+
+    // Phase 7: Zone transitions
+    this.updateZones(dt);
 
     // Level patterns
     this.updatePatterns();
@@ -409,6 +433,43 @@ export class Game {
     this.sectionAnnounceTimer = 2.0;
   }
 
+  private updateZones(dt: number): void {
+    this.zones.update(this.player.posZ, dt);
+
+    // Apply blended zone colors every frame during transitions (or once when stable)
+    const colors = this.zones.getBlendedColors();
+    this.environment.applyZoneColors(colors);
+    this.track.setColors(colors.trackSand, colors.trackBase, colors.trackDivider, colors.trackEdge);
+
+    // When a new zone transition starts, show zone name and update spawners
+    if (this.zones.zoneChangedThisFrame) {
+      zoneNameEl.textContent = this.zones.newZoneName;
+      zoneAnnounce.classList.remove('active');
+      void zoneAnnounce.offsetWidth; // force reflow
+      zoneAnnounce.classList.add('active');
+      this.zoneAnnounceTimer = 3.0;
+
+      // Update obstacle and decor zones to the NEXT zone
+      const nextZone = this.zones.nextZone;
+      if (nextZone) {
+        this.obstacles.currentZone = nextZone.id;
+        this.environment.switchDecorZone(nextZone.id);
+
+        // Update music
+        const musicCfg = this.zones.getBlendedMusicConfig();
+        audioManager.setMusicConfig(musicCfg.chords, musicCfg.tempo, musicCfg.bassType);
+      }
+    }
+
+    // Zone announce timer
+    if (this.zoneAnnounceTimer > 0) {
+      this.zoneAnnounceTimer -= dt;
+      if (this.zoneAnnounceTimer <= 0) {
+        zoneAnnounce.classList.remove('active');
+      }
+    }
+  }
+
   private updateHUD(_dt: number): void {
     // Score
     const mult = this.score.displayMultiplier;
@@ -557,10 +618,11 @@ export class Game {
     audioManager.vibrateCrash();
     audioManager.stopMusic();
 
-    // Clear Phase 5 HUD
+    // Clear HUD
     comboDisplay.classList.remove('active');
     powerupBar.innerHTML = '';
     sectionAnnounce.classList.remove('active');
+    zoneAnnounce.classList.remove('active');
 
     // VFX: crash particles + screen shake
     this.crashParticles.emit(
