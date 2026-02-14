@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>SurfTrip 3D — Chapadmalal</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      html, body {
+        overflow: hidden;
+        touch-action: none;
+        width: 100%;
+        height: 100%;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: #000;
+      }
+      #game-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* HUD overlay */
+      #hud {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        padding-top: max(12px, env(safe-area-inset-top));
+        z-index: 5;
+        font-size: clamp(1rem, 3.5vw, 1.3rem);
+        font-weight: 700;
+        color: #fff;
+        pointer-events: none;
+      }
+      #hud.active { display: flex; }
+      #hud .score-display {
+        background: rgba(0,0,0,0.4);
+        padding: 6px 14px;
+        border-radius: 10px;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+      }
+
+      /* Start screen */
+      #start-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #E0F0FF 70%, #F5E6CA 90%, #EDDcB3 100%);
+        z-index: 20;
+        gap: 16px;
+        padding: 24px;
+        text-align: center;
+      }
+      #start-screen.hidden { display: none; }
+      #start-screen h1 {
+        font-size: clamp(2rem, 8vw, 3.5rem);
+        color: #1a6b8a;
+        text-shadow: 2px 2px 0 rgba(255,255,255,0.6);
+      }
+      #start-screen .subtitle {
+        font-size: clamp(0.9rem, 3vw, 1.2rem);
+        color: #3a8aa8;
+        max-width: 320px;
+      }
+      #start-screen .emoji-hero {
+        font-size: clamp(4rem, 15vw, 7rem);
+        animation: bobbing 2s ease-in-out infinite;
+      }
+      @keyframes bobbing {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-12px); }
+      }
+      #start-screen .controls-hint {
+        font-size: clamp(0.8rem, 2.5vw, 1rem);
+        color: #5a9ab5;
+        background: rgba(255,255,255,0.5);
+        padding: 10px 20px;
+        border-radius: 12px;
+        max-width: 300px;
+      }
+
+      /* Buttons */
+      .btn {
+        font-size: clamp(1.2rem, 4vw, 1.6rem);
+        font-weight: 700;
+        padding: 16px 48px;
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.1s;
+      }
+      .btn:active { transform: scale(0.95); }
+      .btn-start {
+        background: linear-gradient(135deg, #FF9A56, #FF6B35);
+        color: white;
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+      }
+
+      /* Game over */
+      #game-over {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: rgba(26, 107, 138, 0.85);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 10;
+        gap: 12px;
+        padding: 24px;
+        text-align: center;
+      }
+      #game-over.active { display: flex; }
+      #game-over h2 {
+        font-size: clamp(2.5rem, 10vw, 4rem);
+        color: #FFF;
+        text-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+      }
+      #game-over .wipeout-emoji { font-size: clamp(3rem, 12vw, 5rem); }
+      #game-over .final-score {
+        font-size: clamp(1.2rem, 4vw, 1.8rem);
+        color: #E0F0FF;
+      }
+      #game-over .high-score {
+        font-size: clamp(0.9rem, 3vw, 1.1rem);
+        color: #a0d8ef;
+      }
+      .btn-restart {
+        background: linear-gradient(135deg, #56D67B, #2ECC55);
+        color: white;
+        box-shadow: 0 4px 15px rgba(46, 204, 85, 0.4);
+        min-width: 220px;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-CXimBZZL.js"></script>
+  </head>
+  <body>
+    <!-- Start Screen -->
+    <div id="start-screen">
+      <div class="emoji-hero">🏄‍♂️</div>
+      <h1>Surf Runner 3D</h1>
+      <p class="subtitle">Surfeando las olas de Chapadmalal</p>
+      <div class="controls-hint">
+        Desliza para cambiar de carril<br>
+        Swipe arriba para saltar<br>
+        Swipe abajo para deslizarte<br>
+        Esquiva obstaculos y junta items!
+      </div>
+      <button class="btn btn-start" id="btn-play">Surfeaaaar!</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+      <span class="score-display" id="score-label">0 pts</span>
+      <span class="score-display" id="hi-label">HI: 0</span>
+    </div>
+
+    <!-- Game Over -->
+    <div id="game-over">
+      <div class="wipeout-emoji">🌊😵</div>
+      <h2>Wipeout!</h2>
+      <p class="final-score" id="final-score">Puntos: 0</p>
+      <p class="high-score" id="high-score">Record: 0</p>
+      <button class="btn btn-restart" id="btn-restart">Volver al agua!</button>
+    </div>
+
+  </body>
+</html>
