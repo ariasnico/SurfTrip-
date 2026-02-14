@@ -121,11 +121,13 @@ export class Game {
   private start(): void {
     // Reset everything
     this.player.reset();
+    this.track.reset();
     this.obstacles.reset();
     this.collectibles.reset();
     this.score.reset();
     this.difficulty.reset();
     this.screenShake.reset();
+    this.environment.reset();
 
     // UI
     startScreen.classList.add('hidden');

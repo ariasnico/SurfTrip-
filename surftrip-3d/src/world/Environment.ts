@@ -44,6 +44,14 @@ export class Environment {
     }
   }
 
+  reset(): void {
+    // Remove old palms and recreate at starting positions
+    while (this.palmTrees.children.length > 0) {
+      this.palmTrees.remove(this.palmTrees.children[0]);
+    }
+    this.createPalms();
+  }
+
   update(playerZ: number, dt: number): void {
     this.ocean.update(dt, playerZ);
     this.sky.update(dt, playerZ);
