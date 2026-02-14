@@ -178,9 +178,6 @@ export class Game {
     if (nearby.length === 0) return false;
 
     const playerBox = this.player.getHitbox();
-    // Offset player hitbox to world Z
-    playerBox.min.z += this.player.posZ;
-    playerBox.max.z += this.player.posZ;
 
     for (const obs of nearby) {
       // Build obstacle box — use userData dimensions if available, fallback to geometry

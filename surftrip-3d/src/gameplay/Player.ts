@@ -96,6 +96,7 @@ export class Player {
 
     // Move forward in world
     this.posZ += speed * dt;
+    this.mesh.position.z = this.posZ;
 
     // Lane movement (smooth lerp on X)
     const lerpT = clamp(LANE_SWITCH_SPEED * dt, 0, 1);
@@ -151,9 +152,10 @@ export class Player {
     const halfD = 0.2;
     const px = this.mesh.position.x;
     const py = this.mesh.position.y;
+    const pz = this.mesh.position.z;
     return new THREE.Box3(
-      new THREE.Vector3(px - halfW, py, -halfD),
-      new THREE.Vector3(px + halfW, py + h, halfD),
+      new THREE.Vector3(px - halfW, py, pz - halfD),
+      new THREE.Vector3(px + halfW, py + h, pz + halfD),
     );
   }
 
