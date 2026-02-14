@@ -1,8 +1,8 @@
 /**
- * Zone Data — Phase 7: Zones & Variety
+ * Zone Data — Phase 7: Zones & Variety + Phase 6: Visual Improvements
  *
  * Defines the 4 themed zones of the Argentine coast.
- * Each zone has unique colors, decorations, obstacles, and music.
+ * Each zone has unique colors, lighting, decorations, obstacles, and music.
  */
 
 export type ZoneId = 'chapadmalal' | 'rambla' | 'carilo' | 'rutaCostera';
@@ -22,11 +22,22 @@ export interface ZoneColors {
   trackEdge: number;
 }
 
+export interface ZoneLighting {
+  sunColor: number;
+  sunIntensity: number;
+  sunPosition: [number, number, number]; // relative to player Z
+  ambientIntensity: number;
+  hemisphereGround: number;
+  sunGlow: [number, number, number]; // sky shader glow color
+  bloomStrength: number;
+}
+
 export interface ZoneConfig {
   id: ZoneId;
   name: string;
   displayName: string;
   colors: ZoneColors;
+  lighting: ZoneLighting;
   /** Music chord progression (arrays of 3 frequencies each) */
   chords: number[][];
   /** Music tempo in ms per beat */
@@ -54,7 +65,15 @@ const chapadmalal: ZoneConfig = {
     trackDivider: 0xcdb990,
     trackEdge: 0xc0a880,
   },
-  // Am - F - C - G (surf rock)
+  lighting: {
+    sunColor: 0xfff4e0,
+    sunIntensity: 1.2,
+    sunPosition: [15, 40, 100],
+    ambientIntensity: 0.3,
+    hemisphereGround: 0xf5e6ca,
+    sunGlow: [1.0, 0.95, 0.8],
+    bloomStrength: 0.4,
+  },
   chords: [
     [220, 261.63, 329.63],
     [174.61, 220, 261.63],
@@ -84,7 +103,15 @@ const rambla: ZoneConfig = {
     trackDivider: 0x999088,
     trackEdge: 0x887870,
   },
-  // Dm - Bb - F - C (urban bossa)
+  lighting: {
+    sunColor: 0xffe8d0,
+    sunIntensity: 1.0,
+    sunPosition: [20, 30, 80],
+    ambientIntensity: 0.35,
+    hemisphereGround: 0xc0b0a0,
+    sunGlow: [0.9, 0.85, 0.8],
+    bloomStrength: 0.35,
+  },
   chords: [
     [293.66, 349.23, 440],
     [233.08, 293.66, 349.23],
@@ -114,7 +141,15 @@ const carilo: ZoneConfig = {
     trackDivider: 0x605038,
     trackEdge: 0x504030,
   },
-  // Em - Am - Bm - Em (mysterious forest)
+  lighting: {
+    sunColor: 0xd4e8c0,
+    sunIntensity: 0.7,
+    sunPosition: [8, 20, 60],
+    ambientIntensity: 0.4,
+    hemisphereGround: 0x5a6a40,
+    sunGlow: [0.6, 0.75, 0.5],
+    bloomStrength: 0.3,
+  },
   chords: [
     [164.81, 207.65, 246.94],
     [220, 261.63, 329.63],
@@ -144,7 +179,15 @@ const rutaCostera: ZoneConfig = {
     trackDivider: 0x606050,
     trackEdge: 0xd0a030,
   },
-  // D - A - E - A (road rock)
+  lighting: {
+    sunColor: 0xff8844,
+    sunIntensity: 1.4,
+    sunPosition: [40, 10, 50],
+    ambientIntensity: 0.25,
+    hemisphereGround: 0xaa8040,
+    sunGlow: [1.0, 0.6, 0.3],
+    bloomStrength: 0.6,
+  },
   chords: [
     [293.66, 369.99, 440],
     [220, 277.18, 329.63],
