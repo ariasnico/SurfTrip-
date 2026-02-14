@@ -70,6 +70,18 @@ export class ObstacleSpawner {
 
   /** Spawn obstacles from a pattern section at a given world Z offset */
   spawnFromPattern(patternObstacles: { lane: number; offsetZ: number; type: 'low' | 'high' }[], startZ: number): void {
+    // Clear any pre-existing random obstacles in the pattern zone to prevent stacking
+    const endZ = startZ + (patternObstacles.length > 0
+      ? Math.max(...patternObstacles.map(o => o.offsetZ)) + 5
+      : 40);
+    for (const obs of this.obstacles) {
+      if (obs.active && obs.worldZ >= startZ - 5 && obs.worldZ <= endZ) {
+        obs.active = false;
+        obs.mesh.visible = false;
+        this.group.remove(obs.mesh);
+      }
+    }
+
     for (const po of patternObstacles) {
       const mesh = po.type === 'low' ? createLowObstacle(this.currentZone) : createHighObstacle(this.currentZone);
       const x = LANES[po.lane];

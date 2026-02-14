@@ -44,14 +44,14 @@ function createRockField(): PatternSection {
   const collectibles: PatternCollectible[] = [];
   const length = 40;
 
-  // Dense low obstacles in varied lanes
-  for (let z = 0; z < length; z += 6) {
+  // Dense low obstacles in varied lanes (spacing 8 instead of 6 to avoid wall-of-obstacles)
+  for (let z = 0; z < length; z += 8) {
     const lane1 = randInt(0, 2);
     obstacles.push({ lane: lane1, offsetZ: z, type: 'low' });
-    // Sometimes add a second obstacle in a different lane
-    if (Math.random() < 0.4) {
+    // Sometimes add a second obstacle in a different lane (reduced chance)
+    if (Math.random() < 0.3) {
       const lane2 = (lane1 + randInt(1, 2)) % 3;
-      obstacles.push({ lane: lane2, offsetZ: z + 2, type: 'low' });
+      obstacles.push({ lane: lane2, offsetZ: z + 3, type: 'low' });
     }
   }
 
