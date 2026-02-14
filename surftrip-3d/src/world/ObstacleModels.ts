@@ -2,13 +2,15 @@ import * as THREE from 'three';
 
 /** Creates varied low obstacle meshes (things to jump over) */
 export function createLowObstacle(): THREE.Mesh {
-  const variant = Math.floor(Math.random() * 3);
+  const variant = Math.floor(Math.random() * 4);
 
   switch (variant) {
     case 0: // Rock cluster
       return createRockObstacle();
     case 1: // Driftwood log
       return createDriftwood();
+    case 2: // Mate gigante
+      return createMateObstacle();
     default: // Sandcastle wall
       return createSandWall();
   }
@@ -100,6 +102,62 @@ function createUmbrellaBarrier(): THREE.Mesh {
   hitbox.userData['boxW'] = 2.0;
   hitbox.userData['boxH'] = 1.2;
   hitbox.userData['boxD'] = 0.3;
+  return hitbox as THREE.Mesh;
+}
+
+/** Mate gourd with bombilla — Argentine icon obstacle */
+function createMateObstacle(): THREE.Mesh {
+  const group = new THREE.Group();
+
+  // Gourd body (rounded vessel)
+  const gourdMat = new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.8 });
+  const gourdGeo = new THREE.SphereGeometry(0.45, 10, 8);
+  gourdGeo.scale(1.0, 0.85, 1.0);
+  const gourd = new THREE.Mesh(gourdGeo, gourdMat);
+  gourd.position.y = 0;
+  gourd.castShadow = true;
+  group.add(gourd);
+
+  // Metal rim at the top
+  const rimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.7, roughness: 0.3 });
+  const rimGeo = new THREE.TorusGeometry(0.32, 0.04, 8, 16);
+  rimGeo.rotateX(Math.PI / 2);
+  const rim = new THREE.Mesh(rimGeo, rimMat);
+  rim.position.y = 0.32;
+  group.add(rim);
+
+  // Yerba inside (green)
+  const yerbaMat = new THREE.MeshStandardMaterial({ color: 0x3d6b2e, roughness: 0.9 });
+  const yerbaGeo = new THREE.CircleGeometry(0.3, 10);
+  yerbaGeo.rotateX(-Math.PI / 2);
+  const yerba = new THREE.Mesh(yerbaGeo, yerbaMat);
+  yerba.position.y = 0.33;
+  group.add(yerba);
+
+  // Bombilla (metal straw)
+  const bombillaGeo = new THREE.CylinderGeometry(0.025, 0.03, 1.0, 6);
+  const bombilla = new THREE.Mesh(bombillaGeo, rimMat);
+  bombilla.position.set(0.1, 0.6, 0);
+  bombilla.rotation.z = -0.25;
+  bombilla.castShadow = true;
+  group.add(bombilla);
+
+  // Bombilla filter (flattened sphere at bottom)
+  const filterGeo = new THREE.SphereGeometry(0.05, 6, 4);
+  filterGeo.scale(1.2, 0.5, 1.2);
+  const filter = new THREE.Mesh(filterGeo, rimMat);
+  filter.position.set(0.0, 0.15, 0);
+  group.add(filter);
+
+  // Invisible hitbox
+  const geo = new THREE.BoxGeometry(1.0, 1.2, 1.0);
+  const mat = new THREE.MeshStandardMaterial({ visible: false });
+  const hitbox = new THREE.Mesh(geo, mat);
+  hitbox.add(group);
+  hitbox.castShadow = true;
+  hitbox.userData['boxW'] = 1.0;
+  hitbox.userData['boxH'] = 1.2;
+  hitbox.userData['boxD'] = 1.0;
   return hitbox as THREE.Mesh;
 }
 
