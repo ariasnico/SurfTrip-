@@ -180,7 +180,10 @@ export class Player {
     this.animator.reset();
   }
 
-  /** AABB hitbox in world coordinates */
+  // Pre-allocated hitbox to avoid per-frame GC allocations
+  private _hitbox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+
+  /** AABB hitbox in world coordinates (reuses pre-allocated Box3) */
   getHitbox(): THREE.Box3 {
     const halfW = 0.3;
     const h = this.state === 'sliding' ? 0.7 : 1.6;
@@ -188,10 +191,9 @@ export class Player {
     const px = this.mesh.position.x;
     const py = this.mesh.position.y;
     const pz = this.mesh.position.z;
-    return new THREE.Box3(
-      new THREE.Vector3(px - halfW, py, pz - halfD),
-      new THREE.Vector3(px + halfW, py + h, pz + halfD),
-    );
+    this._hitbox.min.set(px - halfW, py, pz - halfD);
+    this._hitbox.max.set(px + halfW, py + h, pz + halfD);
+    return this._hitbox;
   }
 
   dispose(): void {
