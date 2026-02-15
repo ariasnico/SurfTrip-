@@ -3,6 +3,7 @@ import { Ocean } from './Ocean';
 import { Sky } from './Sky';
 import { BeachDecor } from './BeachDecor';
 import { createPalmTree } from './PalmTree';
+import { qualityManager } from '@core/QualityManager';
 import type { ZoneColors, ZoneId, ZoneLighting } from '@data/ZoneData';
 
 export class Environment {
@@ -33,7 +34,9 @@ export class Environment {
   }
 
   private createPalms(): void {
-    for (let z = 0; z < this.palmSpan; z += 10 + Math.random() * 6) {
+    const density = qualityManager.settings.palmDensity;
+    const spacing = (10 + 3) / density; // Adjust spacing by density
+    for (let z = 0; z < this.palmSpan; z += spacing + Math.random() * 6) {
       for (const side of [-1, 1]) {
         const xOffset = 5.5 + Math.random() * 3;
         const tree = createPalmTree();
@@ -110,11 +113,15 @@ export class Environment {
     this.sky.update(dt, playerZ);
     this.beachDecor.update(playerZ);
 
-    // Recycle palm trees
+    const fogFar = qualityManager.settings.fogFar;
+    // Recycle palm trees + distance-based visibility
     for (const child of this.palmTrees.children) {
       if (child.position.z < playerZ - 20) {
         child.position.z += this.palmSpan;
       }
+      // Hide palms beyond fog distance
+      const dist = child.position.z - playerZ;
+      child.visible = dist > -20 && dist < fogFar + 10;
     }
   }
 

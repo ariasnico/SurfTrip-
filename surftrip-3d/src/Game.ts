@@ -20,6 +20,8 @@ import { ZONE_GRADING } from '@vfx/PostProcessing';
 import { lerp } from '@utils/MathUtils';
 import { audioManager } from '@core/AudioManager';
 import { eventBus } from '@core/EventBus';
+import { qualityManager } from '@core/QualityManager';
+import { geometryCache } from '@utils/GeometryCache';
 import type { PowerUpType } from '@gameplay/PowerUpManager';
 import type { PatternSection } from '@gameplay/LevelPatternManager';
 
@@ -43,6 +45,8 @@ const powerupBar = document.getElementById('powerup-bar')!;
 const sectionAnnounce = document.getElementById('section-announce')!;
 const zoneAnnounce = document.getElementById('zone-announce')!;
 const zoneNameEl = document.getElementById('zone-name')!;
+const btnQuality = document.getElementById('btn-quality')!;
+const qualityLabel = document.getElementById('quality-label')!;
 
 // Colors for VFX
 const GOLD = new THREE.Color(0xffd700);
@@ -192,6 +196,13 @@ export class Game {
       btnSound.textContent = muted ? '🔇' : '🔊';
     });
 
+    // Quality toggle
+    qualityLabel.textContent = qualityManager.level.toUpperCase();
+    btnQuality.addEventListener('click', () => {
+      const next = qualityManager.cycleLevel();
+      qualityLabel.textContent = next.toUpperCase();
+    });
+
     // Lane switch audio
     eventBus.on('input:swipe', () => {
       if (this.state === 'playing') {
@@ -254,6 +265,9 @@ export class Game {
     // Start music
     audioManager.startMusic();
 
+    // Start FPS auto-detection for quality presets
+    qualityManager.startAutoDetect();
+
     // Start loop
     if (this.animId) cancelAnimationFrame(this.animId);
     this.loop();
@@ -264,6 +278,12 @@ export class Game {
     this.animId = requestAnimationFrame(this.loop);
 
     const dt = Math.min(this.sceneManager.getDelta(), 0.05); // cap delta
+
+    // Auto-detect quality from FPS during first seconds
+    if (qualityManager.feedFrame(dt)) {
+      qualityLabel.textContent = qualityManager.level.toUpperCase();
+    }
+
     this.difficulty.update(dt);
 
     // Apply slow-mo power-up to effective speed
@@ -632,6 +652,9 @@ export class Game {
     }
   }
 
+  // Pre-allocated obstacle hitbox to avoid per-frame GC
+  private _obsBox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+
   private checkCollisions(): boolean {
     const nearby = this.obstacles.getActiveNear(this.player.posZ);
     if (nearby.length === 0) return false;
@@ -657,12 +680,10 @@ export class Game {
       const oy = om.position.y;
       const oz = om.position.z;
 
-      const obsBox = new THREE.Box3(
-        new THREE.Vector3(ox - halfW, oy - halfH, oz - halfD),
-        new THREE.Vector3(ox + halfW, oy + halfH, oz + halfD),
-      );
+      this._obsBox.min.set(ox - halfW, oy - halfH, oz - halfD);
+      this._obsBox.max.set(ox + halfW, oy + halfH, oz + halfD);
 
-      if (playerBox.intersectsBox(obsBox)) {
+      if (playerBox.intersectsBox(this._obsBox)) {
         // High obstacles: player can slide under
         if (obs.type === 'high' && this.player.state === 'sliding') {
           continue;
@@ -772,6 +793,7 @@ export class Game {
     this.powerUpParticles.dispose();
     this.sandTrail.dispose();
     this.ambientParticles.dispose();
+    geometryCache.dispose();
   }
 }
 

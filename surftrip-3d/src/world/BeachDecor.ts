@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { qualityManager } from '@core/QualityManager';
 import type { ZoneId } from '@data/ZoneData';
 
 /** Procedural decorations placed alongside the track — zone-aware */
@@ -24,7 +25,9 @@ export class BeachDecor {
   }
 
   private populate(): void {
-    for (let z = 0; z < this.totalSpan; z += 8 + Math.random() * 10) {
+    const density = qualityManager.settings.decorDensity;
+    const baseSpacing = 200 / density; // Larger spacing = fewer items
+    for (let z = 0; z < this.totalSpan; z += baseSpacing + Math.random() * 10) {
       const side = Math.random() < 0.5 ? -1 : 1;
       const x = side * (4 + Math.random() * 4);
       this.group.add(this.createDecorForZone(x, z));
@@ -626,10 +629,14 @@ export class BeachDecor {
   }
 
   update(playerZ: number): void {
+    const fogFar = qualityManager.settings.fogFar;
     for (const child of this.group.children) {
       if (child.position.z < playerZ - 20) {
         child.position.z += this.totalSpan;
       }
+      // Distance-based visibility culling
+      const dist = child.position.z - playerZ;
+      child.visible = dist > -20 && dist < fogFar + 10;
     }
   }
 

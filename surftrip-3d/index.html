@@ -305,6 +305,32 @@
         pointer-events: auto;
       }
       #btn-sound:active { transform: scale(0.9); }
+
+      /* Quality toggle */
+      #btn-quality {
+        position: fixed;
+        top: max(12px, env(safe-area-inset-top));
+        right: 60px;
+        z-index: 25;
+        height: 40px;
+        border: none;
+        border-radius: 20px;
+        background: rgba(0,0,0,0.35);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 12px;
+        pointer-events: auto;
+        letter-spacing: 0.5px;
+      }
+      #btn-quality:active { transform: scale(0.9); }
+      #btn-quality .quality-icon { font-size: 0.9rem; }
     </style>
   </head>
   <body>
@@ -354,6 +380,9 @@
       <p class="high-score" id="high-score">Record: 0</p>
       <button class="btn btn-restart" id="btn-restart">Volver al agua!</button>
     </div>
+
+    <!-- Quality toggle button -->
+    <button id="btn-quality" aria-label="Toggle quality"><span class="quality-icon">⚙</span><span id="quality-label">HIGH</span></button>
 
     <!-- Sound toggle button -->
     <button id="btn-sound" aria-label="Toggle sound">🔊</button>
