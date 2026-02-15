@@ -631,12 +631,12 @@ export class BeachDecor {
   update(playerZ: number): void {
     const fogFar = qualityManager.settings.fogFar;
     for (const child of this.group.children) {
-      if (child.position.z < playerZ - 20) {
+      if (child.position.z < playerZ - 40) {
         child.position.z += this.totalSpan;
       }
       // Distance-based visibility culling
       const dist = child.position.z - playerZ;
-      child.visible = dist > -20 && dist < fogFar + 10;
+      child.visible = dist > -40 && dist < fogFar + 10;
     }
   }
 

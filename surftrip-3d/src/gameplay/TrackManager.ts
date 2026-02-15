@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { LANE_WIDTH, LANES } from './LaneSystem';
 
 const CHUNK_LENGTH = 30;
-const CHUNK_COUNT = 6;
+const CHUNK_COUNT = 10;
+const RECYCLE_BEHIND = CHUNK_LENGTH * 2; // distance behind player before recycling
 const TRACK_WIDTH = LANE_WIDTH * 2 + 4; // extra margin on sides
 
 /** Procedural sand shader — noise-based texture with zone-dynamic colors */
@@ -179,10 +180,10 @@ export class TrackManager {
     // Move the base ground to follow the player
     this.baseGround.position.z = playerZ + 80;
 
-    // Recycle chunks that are behind the player
+    // Recycle chunks that are well behind the player (invisible to the camera)
     for (const chunk of this.chunks) {
-      const chunkEnd = chunk.position.z - CHUNK_LENGTH / 2;
-      if (chunkEnd < playerZ - CHUNK_LENGTH) {
+      const chunkFront = chunk.position.z + CHUNK_LENGTH / 2;
+      if (chunkFront < playerZ - RECYCLE_BEHIND) {
         // Move this chunk to the front
         chunk.position.z = this.furthestZ + CHUNK_LENGTH / 2;
         this.furthestZ += CHUNK_LENGTH;
