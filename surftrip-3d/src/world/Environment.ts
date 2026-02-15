@@ -116,12 +116,12 @@ export class Environment {
     const fogFar = qualityManager.settings.fogFar;
     // Recycle palm trees + distance-based visibility
     for (const child of this.palmTrees.children) {
-      if (child.position.z < playerZ - 20) {
+      if (child.position.z < playerZ - 40) {
         child.position.z += this.palmSpan;
       }
       // Hide palms beyond fog distance
       const dist = child.position.z - playerZ;
-      child.visible = dist > -20 && dist < fogFar + 10;
+      child.visible = dist > -40 && dist < fogFar + 10;
     }
   }
 

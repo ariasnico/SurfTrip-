@@ -47,6 +47,8 @@ const zoneAnnounce = document.getElementById('zone-announce')!;
 const zoneNameEl = document.getElementById('zone-name')!;
 const btnQuality = document.getElementById('btn-quality')!;
 const qualityLabel = document.getElementById('quality-label')!;
+const qualityDropdown = document.getElementById('quality-dropdown')!;
+const qualityOptions = qualityDropdown.querySelectorAll('button[data-quality]');
 
 // Colors for VFX
 const GOLD = new THREE.Color(0xffd700);
@@ -196,11 +198,26 @@ export class Game {
       btnSound.textContent = muted ? '🔇' : '🔊';
     });
 
-    // Quality toggle
+    // Quality dropdown
     qualityLabel.textContent = qualityManager.level.toUpperCase();
-    btnQuality.addEventListener('click', () => {
-      const next = qualityManager.cycleLevel();
-      qualityLabel.textContent = next.toUpperCase();
+    this.updateQualityDropdown();
+    btnQuality.addEventListener('click', (e) => {
+      e.stopPropagation();
+      qualityDropdown.classList.toggle('open');
+    });
+    qualityOptions.forEach((opt) => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const level = (opt as HTMLElement).dataset['quality'] as 'low' | 'medium' | 'high' | 'ultra';
+        qualityManager.setLevel(level);
+        qualityLabel.textContent = level.toUpperCase();
+        this.updateQualityDropdown();
+        qualityDropdown.classList.remove('open');
+      });
+    });
+    // Close dropdown when clicking elsewhere
+    document.addEventListener('click', () => {
+      qualityDropdown.classList.remove('open');
     });
 
     // Lane switch audio
@@ -282,6 +299,7 @@ export class Game {
     // Auto-detect quality from FPS during first seconds
     if (qualityManager.feedFrame(dt)) {
       qualityLabel.textContent = qualityManager.level.toUpperCase();
+      this.updateQualityDropdown();
     }
 
     this.difficulty.update(dt);
@@ -777,6 +795,14 @@ export class Game {
 
     hud.classList.remove('active');
     gameOverScreen.classList.add('active');
+  }
+
+  private updateQualityDropdown(): void {
+    const current = qualityManager.level;
+    qualityOptions.forEach((opt) => {
+      const level = (opt as HTMLElement).dataset['quality'];
+      opt.classList.toggle('selected', level === current);
+    });
   }
 
   dispose(): void {
