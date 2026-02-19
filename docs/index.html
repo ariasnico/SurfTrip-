@@ -152,6 +152,30 @@
         100% { transform: translate(-50%, -50%); opacity: 1; }
       }
 
+      /* Near-miss popup */
+      #near-miss {
+        position: fixed;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 7;
+        font-size: clamp(1.1rem, 4vw, 1.6rem);
+        font-weight: 800;
+        color: #ff9900;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.6), 0 0 12px rgba(255,153,0,0.4);
+        pointer-events: none;
+        opacity: 0;
+      }
+      #near-miss.active {
+        animation: nearMissPop 0.8s ease-out forwards;
+      }
+      @keyframes nearMissPop {
+        0% { opacity: 0; transform: translate(-50%, -40%) scale(1.5); }
+        20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        70% { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -70%) scale(0.9); }
+      }
+
       /* Start screen */
       #start-screen {
         position: fixed;
@@ -365,7 +389,7 @@
         background: rgba(255,255,255,0.1);
       }
     </style>
-    <script type="module" crossorigin src="./assets/index-DtP0Rnoo.js"></script>
+    <script type="module" crossorigin src="./assets/index-BJf4WhyM.js"></script>
   </head>
   <body>
     <!-- Start Screen -->
@@ -399,6 +423,9 @@
 
     <!-- Section Announce -->
     <div id="section-announce"></div>
+
+    <!-- Near Miss -->
+    <div id="near-miss"></div>
 
     <!-- Zone Announce -->
     <div id="zone-announce">

@@ -3,10 +3,11 @@ import { SceneManager } from '@core/SceneManager';
 import { InputManager } from '@core/InputManager';
 import { Player } from '@gameplay/Player';
 import { TrackManager } from '@gameplay/TrackManager';
-import { ObstacleSpawner } from '@gameplay/ObstacleSpawner';
+import { ObstacleSpawner, type Obstacle } from '@gameplay/ObstacleSpawner';
 import { CollectibleSystem } from '@gameplay/CollectibleSystem';
 import { ScoreManager } from '@gameplay/ScoreManager';
 import { DifficultyManager } from '@gameplay/DifficultyManager';
+import { LANE_WIDTH } from '@gameplay/LaneSystem';
 import { PowerUpManager } from '@gameplay/PowerUpManager';
 import { ComboSystem } from '@gameplay/ComboSystem';
 import { LevelPatternManager } from '@gameplay/LevelPatternManager';
@@ -46,6 +47,7 @@ const sectionAnnounce = document.getElementById('section-announce')!;
 const zoneAnnounce = document.getElementById('zone-announce')!;
 const zoneNameEl = document.getElementById('zone-name')!;
 const btnQuality = document.getElementById('btn-quality')!;
+const nearMissEl = document.getElementById('near-miss')!;
 const qualityLabel = document.getElementById('quality-label')!;
 const qualityDropdown = document.getElementById('quality-dropdown')!;
 const qualityOptions = qualityDropdown.querySelectorAll('button[data-quality]');
@@ -71,6 +73,10 @@ const POWERUP_COLORS: Record<PowerUpType, string> = {
   megawave: '#00ffaa',
   slowmo: '#cc66ff',
 };
+// Near-miss bonus config
+const NEAR_MISS_BONUS = 25;
+const NEAR_MISS_DISPLAY_TIME = 0.8;
+
 const POWERUP_LABELS: Record<PowerUpType, string> = {
   magnet: 'Iman',
   shield: 'Escudo',
@@ -130,6 +136,10 @@ export class Game {
 
   // Zone announce timer
   private zoneAnnounceTimer = 0;
+
+  // Near-miss tracking
+  private nearMissChecked = new Set<Obstacle>();
+  private nearMissTimer = 0;
 
   constructor() {
     this.sceneManager = new SceneManager();
@@ -278,6 +288,9 @@ export class Game {
     this.prevPlayerState = 'running';
     this.sectionAnnounceTimer = 0;
     this.zoneAnnounceTimer = 0;
+    this.nearMissChecked.clear();
+    this.nearMissTimer = 0;
+    nearMissEl.classList.remove('active');
 
     // Start music
     audioManager.startMusic();
@@ -414,6 +427,9 @@ export class Game {
       }
     }
 
+    // Near-miss detection (before collision removes the player)
+    this.checkNearMisses(totalMult);
+
     // Collision detection (with shield / invincibility)
     if (this.checkCollisions()) {
       // Check shield first
@@ -438,6 +454,14 @@ export class Game {
 
     // Camera follow with dynamic FOV
     this.updateCamera(dt);
+
+    // Near-miss display timer
+    if (this.nearMissTimer > 0) {
+      this.nearMissTimer -= dt;
+      if (this.nearMissTimer <= 0) {
+        nearMissEl.classList.remove('active');
+      }
+    }
 
     // HUD updates
     this.updateHUD(dt);
@@ -716,6 +740,49 @@ export class Game {
     return false;
   }
 
+  private checkNearMisses(multiplier: number): void {
+    const nearby = this.obstacles.getActiveNear(this.player.posZ, 3);
+    if (nearby.length === 0) return;
+
+    const playerX = this.player.mesh.position.x;
+    const playerLane = Math.round(playerX / LANE_WIDTH) + 1;
+
+    for (const obs of nearby) {
+      if (this.nearMissChecked.has(obs)) continue;
+
+      // Only count obstacles the player is passing right now
+      const dz = obs.worldZ - this.player.posZ;
+      if (dz > 0.5 || dz < -1.5) continue;
+
+      const laneDiff = Math.abs(obs.lane - playerLane);
+      let isNearMiss = false;
+
+      if (laneDiff === 1) {
+        // Adjacent lane — narrowly dodged
+        isNearMiss = true;
+      } else if (laneDiff === 0) {
+        // Same lane — player actively dodged (jump over low, slide under high)
+        if (obs.type === 'high' && this.player.state === 'sliding') {
+          isNearMiss = true;
+        } else if (obs.type === 'low' && this.player.mesh.position.y > 0.8) {
+          isNearMiss = true;
+        }
+      }
+
+      if (isNearMiss) {
+        this.nearMissChecked.add(obs);
+        this.score.addPoints(NEAR_MISS_BONUS, multiplier);
+
+        // Show popup
+        nearMissEl.textContent = `¡Casi! +${NEAR_MISS_BONUS}`;
+        nearMissEl.classList.remove('active');
+        void nearMissEl.offsetWidth; // force reflow to restart animation
+        nearMissEl.classList.add('active');
+        this.nearMissTimer = NEAR_MISS_DISPLAY_TIME;
+      }
+    }
+  }
+
   private updateCamera(dt: number): void {
     const cam = this.sceneManager.camera;
 
@@ -755,6 +822,7 @@ export class Game {
     powerupBar.innerHTML = '';
     sectionAnnounce.classList.remove('active');
     zoneAnnounce.classList.remove('active');
+    nearMissEl.classList.remove('active');
 
     // VFX: crash particles + screen shake
     this.crashParticles.emit(
